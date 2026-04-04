@@ -4,69 +4,111 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
 	"github.com/timlinux/PropertyForSale/backend/internal/middleware"
 	"github.com/timlinux/PropertyForSale/backend/internal/service"
 )
 
 // AuthHandler handles authentication HTTP requests
 type AuthHandler struct {
-	authSvc *service.AuthService
+	authSvc     *service.AuthService
+	frontendURL string
 }
 
 // NewAuthHandler creates a new auth handler
 func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
-	return &AuthHandler{authSvc: authSvc}
+	return &AuthHandler{
+		authSvc:     authSvc,
+		frontendURL: "http://localhost:5173", // TODO: Make configurable
+	}
 }
 
 // InitiateOAuth handles GET /api/v1/auth/:provider
+// Redirects to the OAuth provider's authorization page
 func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
 	provider := c.Param("provider")
 
-	// In a real implementation, this would redirect to the OAuth provider
-	// For now, return the expected flow
-	c.JSON(http.StatusOK, gin.H{
-		"message":  "Redirect to OAuth provider",
-		"provider": provider,
-	})
+	// Check if provider exists
+	_, err := goth.GetProvider(provider)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":              fmt.Sprintf("unsupported provider: %s", provider),
+			"available_providers": getAvailableProviders(),
+		})
+		return
+	}
+
+	// Set provider in query for gothic
+	q := c.Request.URL.Query()
+	q.Set("provider", provider)
+	c.Request.URL.RawQuery = q.Encode()
+
+	// Begin auth flow - this redirects to the provider
+	gothic.BeginAuthHandler(c.Writer, c.Request)
 }
 
 // OAuthCallback handles GET /api/v1/auth/:provider/callback
+// Processes the OAuth callback and creates/updates user
 func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	provider := c.Param("provider")
-	code := c.Query("code")
 
-	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "authorization code required"})
-		return
-	}
+	// Set provider in query for gothic
+	q := c.Request.URL.Query()
+	q.Set("provider", provider)
+	c.Request.URL.RawQuery = q.Encode()
 
-	// In a real implementation, this would:
-	// 1. Exchange code for tokens with the OAuth provider
-	// 2. Fetch user info from the provider
-	// 3. Create or update user in our database
-	// 4. Generate our own tokens
-
-	// For now, simulate a successful authentication
-	userInfo := service.OAuthUserInfo{
-		Provider:   provider,
-		ProviderID: "mock-provider-id",
-		Email:      "user@example.com",
-		Name:       "Test User",
-		AvatarURL:  "",
-	}
-
-	tokens, user, err := h.authSvc.AuthenticateOAuth(c.Request.Context(), userInfo)
+	// Complete auth and get user info from provider
+	gothUser, err := gothic.CompleteUserAuth(c.Writer, c.Request)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// Redirect to frontend with error
+		c.Redirect(http.StatusTemporaryRedirect,
+			fmt.Sprintf("%s/login?error=%s", h.frontendURL, err.Error()))
 		return
 	}
 
+	// Convert goth user to our user info
+	userInfo := service.OAuthUserInfo{
+		Provider:   gothUser.Provider,
+		ProviderID: gothUser.UserID,
+		Email:      gothUser.Email,
+		Name:       gothUser.Name,
+		AvatarURL:  gothUser.AvatarURL,
+	}
+
+	// If name is empty, try to construct from first/last name
+	if userInfo.Name == "" && (gothUser.FirstName != "" || gothUser.LastName != "") {
+		userInfo.Name = fmt.Sprintf("%s %s", gothUser.FirstName, gothUser.LastName)
+	}
+
+	// Authenticate and get tokens
+	tokens, _, err := h.authSvc.AuthenticateOAuth(c.Request.Context(), userInfo)
+	if err != nil {
+		c.Redirect(http.StatusTemporaryRedirect,
+			fmt.Sprintf("%s/login?error=%s", h.frontendURL, "authentication_failed"))
+		return
+	}
+
+	// Redirect to frontend with tokens
+	// In production, consider using secure HTTP-only cookies instead
+	c.Redirect(http.StatusTemporaryRedirect,
+		fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s&expires_at=%s",
+			h.frontendURL,
+			tokens.AccessToken,
+			tokens.RefreshToken,
+			tokens.ExpiresAt.Format("2006-01-02T15:04:05Z07:00"),
+		))
+}
+
+// GetProviders handles GET /api/v1/auth/providers
+// Returns a list of available OAuth providers
+func (h *AuthHandler) GetProviders(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"tokens": tokens,
-		"user":   user,
+		"providers": getAvailableProviders(),
 	})
 }
 
@@ -128,4 +170,13 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+// getAvailableProviders returns the list of configured OAuth providers
+func getAvailableProviders() []string {
+	var providers []string
+	for name := range goth.GetProviders() {
+		providers = append(providers, name)
+	}
+	return providers
 }

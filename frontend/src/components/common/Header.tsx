@@ -3,22 +3,35 @@
 
 import { Link as RouterLink } from 'react-router-dom'
 import {
+  Avatar,
   Box,
+  Button,
   Container,
   Flex,
   HStack,
   IconButton,
   Link,
+  Menu,
+  MenuButton,
+  MenuDivider,
+  MenuItem,
+  MenuList,
   useColorMode,
   useColorModeValue,
-  Button,
 } from '@chakra-ui/react'
-import { FiSun, FiMoon, FiMenu } from 'react-icons/fi'
+import { FiSun, FiMoon, FiMenu, FiLogOut, FiUser, FiGrid } from 'react-icons/fi'
+import { useAuthStore } from '../../context/authStore'
 
 export default function Header() {
   const { colorMode, toggleColorMode } = useColorMode()
   const bg = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.700')
+
+  const { user, isAuthenticated, logout } = useAuthStore()
+
+  const handleLogout = () => {
+    logout()
+  }
 
   return (
     <Box
@@ -68,15 +81,49 @@ export default function Header() {
               variant="ghost"
               size="sm"
             />
-            <Button
-              as={RouterLink}
-              to="/login"
-              variant="outline"
-              size="sm"
-              display={{ base: 'none', md: 'inline-flex' }}
-            >
-              Sign In
-            </Button>
+
+            {isAuthenticated && user ? (
+              <Menu>
+                <MenuButton
+                  as={Button}
+                  variant="ghost"
+                  size="sm"
+                  p={0}
+                  borderRadius="full"
+                >
+                  <Avatar
+                    size="sm"
+                    name={user.name}
+                    src={user.avatar_url}
+                    bg="luxury.gold"
+                    color="white"
+                  />
+                </MenuButton>
+                <MenuList>
+                  <MenuItem icon={<FiUser />} as={RouterLink} to="/dashboard/profile">
+                    {user.name || user.email}
+                  </MenuItem>
+                  <MenuItem icon={<FiGrid />} as={RouterLink} to="/dashboard">
+                    Dashboard
+                  </MenuItem>
+                  <MenuDivider />
+                  <MenuItem icon={<FiLogOut />} onClick={handleLogout}>
+                    Sign Out
+                  </MenuItem>
+                </MenuList>
+              </Menu>
+            ) : (
+              <Button
+                as={RouterLink}
+                to="/login"
+                variant="outline"
+                size="sm"
+                display={{ base: 'none', md: 'inline-flex' }}
+              >
+                Sign In
+              </Button>
+            )}
+
             <IconButton
               aria-label="Menu"
               icon={<FiMenu />}

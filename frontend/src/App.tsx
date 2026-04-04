@@ -1,14 +1,27 @@
 // SPDX-FileCopyrightText: 2026 Tim Sutton <tim@kartoza.com>
 // SPDX-License-Identifier: EUPL-1.2
 
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Box } from '@chakra-ui/react'
 import Layout from './components/common/Layout'
 import HomePage from './pages/HomePage'
 import PropertyPage from './pages/PropertyPage'
 import PropertiesPage from './pages/PropertiesPage'
 import LoginPage from './pages/LoginPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
+import { useAuthStore } from './context/authStore'
+
+// Protected route wrapper
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
 
 function App() {
   return (
@@ -19,7 +32,15 @@ function App() {
           <Route path="properties" element={<PropertiesPage />} />
           <Route path="property/:slug" element={<PropertyPage />} />
           <Route path="login" element={<LoginPage />} />
-          <Route path="dashboard/*" element={<DashboardPage />} />
+          <Route path="auth/callback" element={<AuthCallbackPage />} />
+          <Route
+            path="dashboard/*"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
         </Route>
       </Routes>
     </Box>

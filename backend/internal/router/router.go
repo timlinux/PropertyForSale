@@ -18,6 +18,7 @@ import (
 	"github.com/timlinux/PropertyForSale/backend/internal/middleware"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
 	"github.com/timlinux/PropertyForSale/backend/internal/service"
+	"github.com/timlinux/PropertyForSale/backend/pkg/auth"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -29,6 +30,10 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	// Initialize OAuth providers and session store
+	auth.InitSession(cfg.Auth.JWTSecret)
+	auth.InitProviders(cfg)
 
 	// Initialize database
 	db, err := initDatabase(cfg)
@@ -85,13 +90,14 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 	v1 := r.Group("/api/v1")
 	{
 		// Auth routes
-		auth := v1.Group("/auth")
+		authRoutes := v1.Group("/auth")
 		{
-			auth.GET("/:provider", handlers.Auth.InitiateOAuth)
-			auth.GET("/:provider/callback", handlers.Auth.OAuthCallback)
-			auth.POST("/refresh", handlers.Auth.RefreshToken)
-			auth.POST("/logout", handlers.Auth.Logout)
-			auth.GET("/me", middleware.RequireAuth(cfg), handlers.Auth.GetCurrentUser)
+			authRoutes.GET("/providers", handlers.Auth.GetProviders)
+			authRoutes.GET("/:provider", handlers.Auth.InitiateOAuth)
+			authRoutes.GET("/:provider/callback", handlers.Auth.OAuthCallback)
+			authRoutes.POST("/refresh", handlers.Auth.RefreshToken)
+			authRoutes.POST("/logout", handlers.Auth.Logout)
+			authRoutes.GET("/me", middleware.RequireAuth(cfg), handlers.Auth.GetCurrentUser)
 		}
 
 		// Property routes (public)
