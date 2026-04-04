@@ -66,10 +66,13 @@ coverage/
 
 # Compiled binary
 propertyforsale
+backend/server
+backend/.go/
 
 # Media uploads (development)
 uploads/
-media/
+/media/
+backend/media/
 
 # GeoIP database
 *.mmdb
