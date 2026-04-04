@@ -4,24 +4,18 @@
 package router
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
-	"github.com/rs/zerolog/log"
 	"github.com/timlinux/PropertyForSale/backend/internal/config"
 	"github.com/timlinux/PropertyForSale/backend/internal/handler"
 	"github.com/timlinux/PropertyForSale/backend/internal/middleware"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
 	"github.com/timlinux/PropertyForSale/backend/internal/service"
 	"github.com/timlinux/PropertyForSale/backend/pkg/auth"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	"github.com/timlinux/PropertyForSale/backend/pkg/database"
 )
 
 // New creates and configures the Gin router with all dependencies
@@ -35,34 +29,25 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 	auth.InitSession(cfg.Auth.JWTSecret)
 	auth.InitProviders(cfg)
 
-	// Initialize database
-	db, err := initDatabase(cfg)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize database: %w", err)
+	// Initialize SQLite database
+	dbCfg := &database.Config{
+		Path:  cfg.DB.Path,
+		Debug: cfg.Env == "development",
 	}
-
-	// Initialize Redis
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Addr(),
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB,
-	})
-
-	// Test Redis connection
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Warn().Err(err).Msg("Redis connection failed, continuing without cache")
+	db, err := database.Init(dbCfg)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Initialize repositories
 	repos := repository.NewRepositories(db)
 
-	// Initialize services
-	services := service.NewServices(repos, rdb, cfg)
+	// Initialize services (nil for Redis - we're not using it)
+	services := service.NewServices(repos, nil, cfg)
 
 	// Initialize handlers
-	handlers := handler.NewHandlers(services)
+	isDev := cfg.Env == "development"
+	handlers := handler.NewHandlers(services, isDev)
 
 	// Create Gin engine
 	r := gin.New()
@@ -81,8 +66,9 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"version": "0.1.0",
+			"status":   "healthy",
+			"version":  "0.1.0",
+			"database": "sqlite",
 		})
 	})
 
@@ -93,11 +79,14 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 		authRoutes := v1.Group("/auth")
 		{
 			authRoutes.GET("/providers", handlers.Auth.GetProviders)
-			authRoutes.GET("/:provider", handlers.Auth.InitiateOAuth)
-			authRoutes.GET("/:provider/callback", handlers.Auth.OAuthCallback)
 			authRoutes.POST("/refresh", handlers.Auth.RefreshToken)
 			authRoutes.POST("/logout", handlers.Auth.Logout)
+			// Dev-only login endpoint (only works in development mode)
+			authRoutes.POST("/dev-login", handlers.Auth.DevLogin)
 			authRoutes.GET("/me", middleware.RequireAuth(cfg), handlers.Auth.GetCurrentUser)
+			// OAuth provider routes (must be last due to wildcard)
+			authRoutes.GET("/:provider", handlers.Auth.InitiateOAuth)
+			authRoutes.GET("/:provider/callback", handlers.Auth.OAuthCallback)
 		}
 
 		// Property routes (public)
@@ -105,9 +94,9 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 		{
 			properties.GET("", handlers.Property.List)
 			properties.GET("/:slug", handlers.Property.GetBySlug)
-			properties.GET("/:id/dwellings", handlers.Property.ListDwellings)
-			properties.GET("/:id/areas", handlers.Property.ListAreas)
-			properties.GET("/:id/media", handlers.Property.ListMedia)
+			properties.GET("/:slug/dwellings", handlers.Property.ListDwellings)
+			properties.GET("/:slug/areas", handlers.Property.ListAreas)
+			properties.GET("/:slug/media", handlers.Property.ListMedia)
 		}
 
 		// Property routes (authenticated)
@@ -115,8 +104,8 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 		propertiesAuth.Use(middleware.RequireAuth(cfg))
 		{
 			propertiesAuth.POST("", handlers.Property.Create)
-			propertiesAuth.PUT("/:id", handlers.Property.Update)
-			propertiesAuth.DELETE("/:id", handlers.Property.Delete)
+			propertiesAuth.PUT("/:slug", handlers.Property.Update)
+			propertiesAuth.DELETE("/:slug", handlers.Property.Delete)
 		}
 
 		// Dwelling routes
@@ -169,6 +158,9 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 			media.DELETE("/:id", handlers.Media.Delete)
 		}
 
+		// Serve media files
+		v1.Static("/media/files", cfg.Storage.Path)
+
 		// Analytics routes
 		analytics := v1.Group("/analytics")
 		{
@@ -198,35 +190,9 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 		if sqlDB != nil {
 			sqlDB.Close()
 		}
-		rdb.Close()
 	}
 
 	return r, cleanup, nil
-}
-
-func initDatabase(cfg *config.Config) (*gorm.DB, error) {
-	gormLogger := logger.Default
-	if cfg.Env == "development" {
-		gormLogger = logger.Default.LogMode(logger.Info)
-	}
-
-	db, err := gorm.Open(postgres.Open(cfg.DB.DSN()), &gorm.Config{
-		Logger: gormLogger,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, err
-	}
-
-	sqlDB.SetMaxOpenConns(cfg.DB.MaxOpenConns)
-	sqlDB.SetMaxIdleConns(cfg.DB.MaxIdleConns)
-	sqlDB.SetConnMaxLifetime(time.Hour)
-
-	return db, nil
 }
 
 func corsMiddleware(cfg *config.Config) gin.HandlerFunc {

@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage'
 import PropertyPage from './pages/PropertyPage'
 import PropertiesPage from './pages/PropertiesPage'
 import LoginPage from './pages/LoginPage'
+import DevLoginPage from './pages/DevLoginPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import { useAuthStore } from './context/authStore'
@@ -32,6 +33,7 @@ function App() {
           <Route path="properties" element={<PropertiesPage />} />
           <Route path="property/:slug" element={<PropertyPage />} />
           <Route path="login" element={<LoginPage />} />
+          <Route path="dev-login" element={<DevLoginPage />} />
           <Route path="auth/callback" element={<AuthCallbackPage />} />
           <Route
             path="dashboard/*"

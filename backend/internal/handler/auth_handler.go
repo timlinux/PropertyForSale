@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
+	userDomain "github.com/timlinux/PropertyForSale/backend/internal/domain/user"
 	"github.com/timlinux/PropertyForSale/backend/internal/middleware"
 	"github.com/timlinux/PropertyForSale/backend/internal/service"
 )
@@ -18,13 +19,15 @@ import (
 type AuthHandler struct {
 	authSvc     *service.AuthService
 	frontendURL string
+	isDev       bool
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
+func NewAuthHandler(authSvc *service.AuthService, isDev bool) *AuthHandler {
 	return &AuthHandler{
 		authSvc:     authSvc,
 		frontendURL: "http://localhost:5173", // TODO: Make configurable
+		isDev:       isDev,
 	}
 }
 
@@ -170,6 +173,73 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+// DevLoginRequest represents the dev login request body
+type DevLoginRequest struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+	Role  string `json:"role"`
+}
+
+// DevLogin handles POST /api/v1/auth/dev-login
+// Only available in development mode - creates a test user and returns tokens
+func (h *AuthHandler) DevLogin(c *gin.Context) {
+	if !h.isDev {
+		c.JSON(http.StatusForbidden, gin.H{"error": "dev login only available in development mode"})
+		return
+	}
+
+	var req DevLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// Use defaults if no body provided
+		req.Email = "dev@example.com"
+		req.Name = "Dev User"
+		req.Role = "admin"
+	}
+
+	// Set defaults for empty fields
+	if req.Email == "" {
+		req.Email = "dev@example.com"
+	}
+	if req.Name == "" {
+		req.Name = "Dev User"
+	}
+	if req.Role == "" {
+		req.Role = "admin"
+	}
+
+	// Create user info as if from OAuth
+	userInfo := service.OAuthUserInfo{
+		Provider:   "dev",
+		ProviderID: "dev-" + req.Email,
+		Email:      req.Email,
+		Name:       req.Name,
+		AvatarURL:  "",
+	}
+
+	// Authenticate (creates user if doesn't exist)
+	tokens, user, err := h.authSvc.AuthenticateOAuth(c.Request.Context(), userInfo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update role if needed (dev login allows setting role)
+	if req.Role != string(user.Role) {
+		if err := h.authSvc.UpdateUserRole(c.Request.Context(), user.ID, req.Role); err != nil {
+			// Log but don't fail - user is still authenticated
+			fmt.Printf("Warning: failed to update user role: %v\n", err)
+		}
+		user.Role = userDomain.Role(req.Role)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+		"expires_at":    tokens.ExpiresAt,
+		"user":          user,
+	})
 }
 
 // getAvailableProviders returns the list of configured OAuth providers

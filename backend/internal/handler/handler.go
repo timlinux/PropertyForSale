@@ -20,14 +20,14 @@ type Handlers struct {
 }
 
 // NewHandlers creates a new Handlers instance with all implementations
-func NewHandlers(services *service.Services) *Handlers {
+func NewHandlers(services *service.Services, isDev bool) *Handlers {
 	return &Handlers{
 		Property:  NewPropertyHandler(services.Property, services.Dwelling, services.Area, services.Media),
 		Dwelling:  NewDwellingHandler(services.Dwelling, services.Room),
 		Room:      NewRoomHandler(services.Room),
 		Area:      NewAreaHandler(services.Area),
 		Media:     NewMediaHandler(services.Media),
-		Auth:      NewAuthHandler(services.Auth),
+		Auth:      NewAuthHandler(services.Auth, isDev),
 		Analytics: NewAnalyticsHandler(services.Analytics),
 		Version:   NewVersionHandler(services.Content),
 	}

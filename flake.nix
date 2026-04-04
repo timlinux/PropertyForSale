@@ -22,6 +22,11 @@
           config.allowUnfree = true;
         };
 
+        # PostgreSQL with PostGIS
+        postgresWithPostGIS = pkgs.postgresql_16.withPackages (ps: [
+          ps.postgis
+        ]);
+
         # Pre-commit hooks configuration
         pre-commit-check = pre-commit-hooks.lib.${system}.run {
           src = ./.;
@@ -102,6 +107,37 @@
           subPackages = [ "cmd/server" ];
         };
 
+        # =======================================================================
+        # Script wrappers - thin wrappers that set env vars and call scripts
+        # =======================================================================
+        scriptsDir = ./scripts;
+
+        # Simple scripts (no Nix paths needed)
+        wrapSimpleScript = name: pkgs.writeShellScriptBin name ''
+          exec ${scriptsDir}/${name}.sh "$@"
+        '';
+
+        # Scripts needing PostgreSQL paths
+        wrapPostgresScript = name: pkgs.writeShellScriptBin name ''
+          export POSTGRES_BIN_DIR="${postgresWithPostGIS}/bin"
+          exec ${scriptsDir}/${name}.sh "$@"
+        '';
+
+        # Define all scripts
+        pgStartScript = wrapPostgresScript "pfs-pg-start";
+        pgStopScript = wrapPostgresScript "pfs-pg-stop";
+        psqlScript = wrapPostgresScript "pfs-psql";
+        migrateScript = wrapPostgresScript "pfs-migrate";
+        redisStartScript = wrapSimpleScript "pfs-redis-start";
+        redisStopScript = wrapSimpleScript "pfs-redis-stop";
+        minioStartScript = wrapSimpleScript "pfs-minio-start";
+        minioStopScript = wrapSimpleScript "pfs-minio-stop";
+        backendScript = wrapSimpleScript "pfs-backend";
+        frontendScript = wrapSimpleScript "pfs-frontend";
+        devStartScript = wrapSimpleScript "pfs-dev-start";
+        devStopScript = wrapSimpleScript "pfs-dev-stop";
+        statusScript = wrapSimpleScript "pfs-status";
+
       in
       {
         # Development shell
@@ -124,8 +160,7 @@
             eslint
 
             # Database
-            postgresql_16
-            postgresqlPackages.postgis
+            postgresWithPostGIS
 
             # Redis
             redis
@@ -164,36 +199,58 @@
             # CAD/3D conversion tools
             openscad
             assimp
+          ] ++ [
+            # Scripts
+            pgStartScript
+            pgStopScript
+            psqlScript
+            migrateScript
+            redisStartScript
+            redisStopScript
+            minioStartScript
+            minioStopScript
+            backendScript
+            frontendScript
+            devStartScript
+            devStopScript
+            statusScript
           ];
 
           shellHook = ''
             ${pre-commit-check.shellHook}
 
-            echo ""
-            echo "PropertyForSale Development Environment"
-            echo "========================================"
-            echo ""
-            echo "Available commands:"
-            echo "  nix run .#dev       - Start all development services"
-            echo "  nix run .#build     - Build production binaries"
-            echo "  nix run .#test      - Run all tests"
-            echo "  nix run .#docs      - Build and serve documentation"
-            echo "  nix run .#migrate   - Run database migrations"
-            echo "  nix run .#lint      - Run all linters"
-            echo ""
-            echo "Manual commands:"
-            echo "  cd backend && air   - Start backend with hot reload"
-            echo "  cd frontend && npm run dev - Start frontend dev server"
-            echo ""
-
             # Set up environment variables
             export GOPATH="$PWD/.go"
             export PATH="$GOPATH/bin:$PATH"
-            export DATABASE_URL="postgres://propertyforsale:propertyforsale@localhost:5432/propertyforsale?sslmode=disable"
-            export REDIS_URL="redis://localhost:6379"
-            export MINIO_ENDPOINT="localhost:9000"
-            export MINIO_ACCESS_KEY="minioadmin"
-            export MINIO_SECRET_KEY="minioadmin"
+            export PGHOST="$PWD/.pgdata"
+            export PGPORT=5432
+            export DB_NAME="propertyforsale"
+            export REDIS_PORT=6379
+            export MINIO_PORT=9000
+            export MINIO_CONSOLE_PORT=9001
+            export MINIO_ROOT_USER="minioadmin"
+            export MINIO_ROOT_PASSWORD="minioadmin"
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🏠 PropertyForSale Development Environment"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "  pfs-status        📊 Check service status"
+            echo "  pfs-dev-start     🚀 Start all services (PG, Redis, MinIO)"
+            echo "  pfs-dev-stop      🛑 Stop all services"
+            echo ""
+            echo "  pfs-backend       🔧 Run Go backend (port 8080)"
+            echo "  pfs-frontend      🎨 Run frontend dev server (port 5173)"
+            echo ""
+            echo "  pfs-pg-start      Start PostgreSQL"
+            echo "  pfs-pg-stop       Stop PostgreSQL"
+            echo "  pfs-psql          Connect to database"
+            echo "  pfs-migrate       Run migrations"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Made with 💗 by Kartoza | https://kartoza.com"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           '';
         };
 
@@ -201,56 +258,24 @@
         packages = {
           default = goBuild;
           backend = goBuild;
+          postgres = postgresWithPostGIS;
         };
 
         # Apps
         apps = {
-          # Start all development services
-          dev = {
-            type = "app";
-            program = toString (pkgs.writeShellScript "dev" ''
-              #!/usr/bin/env bash
-              set -e
-
-              echo "Starting PropertyForSale development environment..."
-
-              # Create data directories
-              mkdir -p .data/postgres .data/redis .data/minio
-
-              # Start PostgreSQL
-              if ! pg_isready -h localhost -p 5432 2>/dev/null; then
-                echo "Starting PostgreSQL..."
-                pg_ctl -D .data/postgres -l .data/postgres.log -o "-p 5432" start 2>/dev/null || {
-                  initdb -D .data/postgres
-                  pg_ctl -D .data/postgres -l .data/postgres.log -o "-p 5432" start
-                  createdb -h localhost -p 5432 propertyforsale 2>/dev/null || true
-                  psql -h localhost -p 5432 -d propertyforsale -c "CREATE EXTENSION IF NOT EXISTS postgis;" 2>/dev/null || true
-                }
-              fi
-
-              # Start Redis
-              if ! redis-cli ping 2>/dev/null; then
-                echo "Starting Redis..."
-                redis-server --daemonize yes --dir .data/redis
-              fi
-
-              # Start MinIO
-              if ! curl -s http://localhost:9000/minio/health/live 2>/dev/null; then
-                echo "Starting MinIO..."
-                minio server .data/minio --console-address ":9001" &
-                sleep 2
-              fi
-
-              echo ""
-              echo "Services started:"
-              echo "  PostgreSQL: localhost:5432"
-              echo "  Redis: localhost:6379"
-              echo "  MinIO: localhost:9000 (Console: localhost:9001)"
-              echo ""
-              echo "Run 'cd backend && air' for backend hot reload"
-              echo "Run 'cd frontend && npm run dev' for frontend"
-            '');
-          };
+          pg-start = { type = "app"; program = "${pgStartScript}/bin/pfs-pg-start"; };
+          pg-stop = { type = "app"; program = "${pgStopScript}/bin/pfs-pg-stop"; };
+          psql = { type = "app"; program = "${psqlScript}/bin/pfs-psql"; };
+          migrate = { type = "app"; program = "${migrateScript}/bin/pfs-migrate"; };
+          redis-start = { type = "app"; program = "${redisStartScript}/bin/pfs-redis-start"; };
+          redis-stop = { type = "app"; program = "${redisStopScript}/bin/pfs-redis-stop"; };
+          minio-start = { type = "app"; program = "${minioStartScript}/bin/pfs-minio-start"; };
+          minio-stop = { type = "app"; program = "${minioStopScript}/bin/pfs-minio-stop"; };
+          backend = { type = "app"; program = "${backendScript}/bin/pfs-backend"; };
+          frontend = { type = "app"; program = "${frontendScript}/bin/pfs-frontend"; };
+          dev-start = { type = "app"; program = "${devStartScript}/bin/pfs-dev-start"; };
+          dev-stop = { type = "app"; program = "${devStopScript}/bin/pfs-dev-stop"; };
+          status = { type = "app"; program = "${statusScript}/bin/pfs-status"; };
 
           # Build production binaries
           build = {
@@ -317,36 +342,6 @@
 
               cd docs
               mkdocs serve -a localhost:8000
-            '');
-          };
-
-          # Run database migrations
-          migrate = {
-            type = "app";
-            program = toString (pkgs.writeShellScript "migrate" ''
-              #!/usr/bin/env bash
-              set -e
-
-              DATABASE_URL="''${DATABASE_URL:-postgres://propertyforsale:propertyforsale@localhost:5432/propertyforsale?sslmode=disable}"
-
-              case "''${1:-up}" in
-                up)
-                  echo "Running migrations up..."
-                  migrate -path backend/migrations -database "$DATABASE_URL" up
-                  ;;
-                down)
-                  echo "Running migrations down..."
-                  migrate -path backend/migrations -database "$DATABASE_URL" down 1
-                  ;;
-                create)
-                  echo "Creating migration: $2"
-                  migrate create -ext sql -dir backend/migrations -seq "$2"
-                  ;;
-                *)
-                  echo "Usage: nix run .#migrate [up|down|create <name>]"
-                  exit 1
-                  ;;
-              esac
             '');
           };
 

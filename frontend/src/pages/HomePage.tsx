@@ -11,61 +11,64 @@ import {
   SimpleGrid,
   Text,
   VStack,
-  useColorModeValue,
+  Icon,
+  Flex,
 } from '@chakra-ui/react'
-import { FiMap, FiHome, FiBarChart2, FiVideo } from 'react-icons/fi'
+import { FiMap, FiHome, FiBarChart2, FiPlay, FiArrowRight } from 'react-icons/fi'
 
 export default function HomePage() {
-  const heroBg = useColorModeValue(
-    'linear-gradient(135deg, #1a365d 0%, #2d3748 100%)',
-    'linear-gradient(135deg, #1a202c 0%, #2d3748 100%)'
-  )
-
   return (
     <Box>
-      {/* Hero Section */}
+      {/* Hero Section - Apple style: massive whitespace, centered content */}
       <Box
-        bg={heroBg}
-        color="white"
-        py={{ base: 20, md: 32 }}
+        minH={{ base: '80vh', md: '90vh' }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        bg="white"
         position="relative"
         overflow="hidden"
       >
-        {/* Decorative element */}
-        <Box
-          position="absolute"
-          top="-50%"
-          right="-10%"
-          w="60%"
-          h="200%"
-          bg="luxury.gold"
-          opacity={0.1}
-          transform="rotate(15deg)"
-          borderRadius="full"
-        />
+        <Container maxW="1000px" textAlign="center">
+          <VStack spacing={{ base: 6, md: 8 }}>
+            {/* Eyebrow text */}
+            <Text
+              fontSize="14px"
+              fontWeight="600"
+              textTransform="uppercase"
+              letterSpacing="0.08em"
+              color="accent.500"
+            >
+              Premium Real Estate
+            </Text>
 
-        <Container maxW="container.xl" position="relative">
-          <VStack spacing={6} align="flex-start" maxW="2xl">
+            {/* Main headline - massive, impactful */}
             <Heading
               as="h1"
-              size={{ base: 'xl', md: '3xl' }}
-              fontWeight="bold"
-              lineHeight="1.2"
+              size="4xl"
+              maxW="900px"
             >
-              Discover Your Dream Property with Immersive Experiences
+              Find your place in the world.
             </Heading>
-            <Text fontSize={{ base: 'lg', md: 'xl' }} opacity={0.9} maxW="xl">
-              Explore properties like never before with interactive 3D tours,
-              detailed floor plans, and comprehensive analytics.
+
+            {/* Subtitle - subdued, supporting */}
+            <Text
+              fontSize={{ base: '19px', md: '21px' }}
+              color="neutral.400"
+              maxW="600px"
+              lineHeight="1.5"
+            >
+              Immersive 3D tours. Interactive maps. Every detail, beautifully presented.
             </Text>
+
+            {/* CTAs - Apple style with proper spacing */}
             <HStack spacing={4} pt={4}>
               <Button
                 as={RouterLink}
                 to="/properties"
                 size="lg"
-                bg="luxury.gold"
-                color="white"
-                _hover={{ bg: 'white', color: 'luxury.navy' }}
+                variant="solid"
+                rightIcon={<FiArrowRight />}
               >
                 Browse Properties
               </Button>
@@ -74,9 +77,6 @@ export default function HomePage() {
                 to="/about"
                 size="lg"
                 variant="outline"
-                borderColor="white"
-                color="white"
-                _hover={{ bg: 'white', color: 'luxury.navy' }}
               >
                 Learn More
               </Button>
@@ -85,61 +85,134 @@ export default function HomePage() {
         </Container>
       </Box>
 
-      {/* Features Section */}
-      <Container maxW="container.xl" py={{ base: 16, md: 24 }}>
-        <VStack spacing={12}>
-          <VStack spacing={4} textAlign="center" maxW="2xl">
-            <Heading as="h2" size="xl">
-              Experience Properties Like Never Before
-            </Heading>
-            <Text fontSize="lg" color="gray.600">
-              Our cutting-edge platform combines stunning visuals with powerful
-              analytics to help you find the perfect property.
-            </Text>
+      {/* Features Section - clean grid with generous spacing */}
+      <Box bg="neutral.100" py={{ base: 20, md: 32 }}>
+        <Container maxW="1200px">
+          <VStack spacing={{ base: 12, md: 20 }}>
+            {/* Section header */}
+            <VStack spacing={4} textAlign="center" maxW="700px">
+              <Heading as="h2" size="2xl">
+                Experience properties differently.
+              </Heading>
+              <Text fontSize="19px" color="neutral.400" lineHeight="1.5">
+                Every feature designed to help you make the right decision.
+              </Text>
+            </VStack>
+
+            {/* Features grid */}
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={{ base: 6, md: 8 }} w="full">
+              <FeatureCard
+                icon={FiPlay}
+                title="3D Virtual Tours"
+                description="Walk through properties from anywhere. 360° video and interactive 3D models bring spaces to life."
+              />
+              <FeatureCard
+                icon={FiMap}
+                title="Interactive Maps"
+                description="Explore every corner with precision. Click to navigate, zoom to discover."
+              />
+              <FeatureCard
+                icon={FiHome}
+                title="Detailed Floor Plans"
+                description="Understand the space completely. 2D blueprints and 3D visualizations in perfect harmony."
+              />
+              <FeatureCard
+                icon={FiBarChart2}
+                title="Market Insights"
+                description="Data-driven decisions. Comprehensive analytics to guide your investment."
+              />
+            </SimpleGrid>
           </VStack>
+        </Container>
+      </Box>
 
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={8} w="full">
-            <FeatureCard
-              icon={FiVideo}
-              title="3D Virtual Tours"
-              description="Immerse yourself in 360-degree video walkthroughs and interactive 3D models."
-            />
-            <FeatureCard
-              icon={FiMap}
-              title="Interactive Maps"
-              description="Navigate property features with clickable maps and explore every corner."
-            />
-            <FeatureCard
-              icon={FiHome}
-              title="Floor Plans"
-              description="View architectural plans in both 2D and 3D for complete spatial understanding."
-            />
-            <FeatureCard
-              icon={FiBarChart2}
-              title="Market Analytics"
-              description="Access comprehensive data and insights to make informed decisions."
-            />
-          </SimpleGrid>
-        </VStack>
-      </Container>
+      {/* Showcase Section - full-width visual impact */}
+      <Box py={{ base: 20, md: 32 }}>
+        <Container maxW="1200px">
+          <Flex
+            direction={{ base: 'column', lg: 'row' }}
+            align="center"
+            gap={{ base: 12, lg: 20 }}
+          >
+            {/* Image placeholder - would be a beautiful property photo */}
+            <Box
+              flex="1"
+              bg="neutral.200"
+              borderRadius="2xl"
+              minH={{ base: '300px', md: '500px' }}
+              w="full"
+              position="relative"
+              overflow="hidden"
+            >
+              <Box
+                position="absolute"
+                inset="0"
+                bg="linear-gradient(135deg, neutral.100 0%, neutral.300 100%)"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Text color="neutral.400" fontSize="lg">Property Showcase</Text>
+              </Box>
+            </Box>
 
-      {/* CTA Section */}
-      <Box bg="luxury.navy" color="white" py={{ base: 16, md: 24 }}>
-        <Container maxW="container.xl">
-          <VStack spacing={6} textAlign="center">
-            <Heading as="h2" size="xl" color="white">
-              Ready to Find Your Perfect Property?
+            {/* Content */}
+            <VStack
+              flex="1"
+              align={{ base: 'center', lg: 'flex-start' }}
+              textAlign={{ base: 'center', lg: 'left' }}
+              spacing={6}
+            >
+              <Text
+                fontSize="12px"
+                fontWeight="600"
+                textTransform="uppercase"
+                letterSpacing="0.08em"
+                color="neutral.400"
+              >
+                Featured Collection
+              </Text>
+              <Heading as="h2" size="xl">
+                Curated properties that inspire.
+              </Heading>
+              <Text fontSize="17px" color="neutral.400" lineHeight="1.6">
+                Each listing is carefully selected and beautifully presented.
+                High-resolution imagery, comprehensive details, and immersive
+                experiences that let you truly understand a space.
+              </Text>
+              <Button
+                as={RouterLink}
+                to="/properties"
+                variant="link"
+                rightIcon={<FiArrowRight />}
+                fontSize="17px"
+                mt={2}
+              >
+                View all properties
+              </Button>
+            </VStack>
+          </Flex>
+        </Container>
+      </Box>
+
+      {/* CTA Section - minimal, elegant */}
+      <Box bg="neutral.800" color="white" py={{ base: 24, md: 32 }}>
+        <Container maxW="800px" textAlign="center">
+          <VStack spacing={6}>
+            <Heading as="h2" size="2xl" color="white">
+              Ready to explore?
             </Heading>
-            <Text fontSize="lg" opacity={0.9} maxW="2xl">
-              Start exploring our curated selection of premium properties today.
+            <Text fontSize="19px" color="neutral.400" maxW="500px" lineHeight="1.5">
+              Start your journey to finding the perfect property.
             </Text>
             <Button
               as={RouterLink}
               to="/properties"
               size="lg"
-              bg="luxury.gold"
-              color="white"
-              _hover={{ bg: 'white', color: 'luxury.navy' }}
+              bg="white"
+              color="neutral.800"
+              _hover={{ bg: 'neutral.100' }}
+              mt={4}
             >
               Get Started
             </Button>
@@ -156,30 +229,36 @@ interface FeatureCardProps {
   description: string
 }
 
-function FeatureCard({ icon: Icon, title, description }: FeatureCardProps) {
+function FeatureCard({ icon: IconComponent, title, description }: FeatureCardProps) {
   return (
-    <VStack
-      p={6}
+    <Box
+      p={{ base: 8, md: 10 }}
       bg="white"
-      borderRadius="lg"
-      boxShadow="md"
-      spacing={4}
-      align="flex-start"
-      _hover={{ transform: 'translateY(-4px)', boxShadow: 'lg' }}
-      transition="all 0.2s"
+      borderRadius="2xl"
+      transition="all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)"
+      _hover={{
+        transform: 'translateY(-4px)',
+        boxShadow: 'lg'
+      }}
     >
-      <Box
-        p={3}
-        bg="luxury.gold"
-        borderRadius="md"
-        color="white"
-      >
-        <Icon size={24} />
-      </Box>
-      <Heading as="h3" size="md">
-        {title}
-      </Heading>
-      <Text color="gray.600">{description}</Text>
-    </VStack>
+      <VStack align="flex-start" spacing={4}>
+        <Flex
+          w="48px"
+          h="48px"
+          bg="neutral.100"
+          borderRadius="xl"
+          align="center"
+          justify="center"
+        >
+          <Icon as={IconComponent} boxSize={5} color="neutral.600" />
+        </Flex>
+        <Heading as="h3" size="md" fontWeight="600">
+          {title}
+        </Heading>
+        <Text color="neutral.400" lineHeight="1.5">
+          {description}
+        </Text>
+      </VStack>
+    </Box>
   )
 }

@@ -16,17 +16,12 @@ import {
   MenuDivider,
   MenuItem,
   MenuList,
-  useColorMode,
-  useColorModeValue,
+  Text,
 } from '@chakra-ui/react'
-import { FiSun, FiMoon, FiMenu, FiLogOut, FiUser, FiGrid } from 'react-icons/fi'
+import { FiMenu, FiLogOut, FiUser, FiGrid } from 'react-icons/fi'
 import { useAuthStore } from '../../context/authStore'
 
 export default function Header() {
-  const { colorMode, toggleColorMode } = useColorMode()
-  const bg = useColorModeValue('white', 'gray.800')
-  const borderColor = useColorModeValue('gray.200', 'gray.700')
-
   const { user, isAuthenticated, logout } = useAuthStore()
 
   const handleLogout = () => {
@@ -39,49 +34,42 @@ export default function Header() {
       position="sticky"
       top={0}
       zIndex={100}
-      bg={bg}
-      borderBottom="1px"
-      borderColor={borderColor}
-      backdropFilter="blur(10px)"
+      bg="rgba(255, 255, 255, 0.8)"
+      backdropFilter="saturate(180%) blur(20px)"
+      borderBottom="1px solid"
+      borderColor="neutral.200"
     >
-      <Container maxW="container.xl">
-        <Flex h="16" align="center" justify="space-between">
-          {/* Logo */}
+      <Container maxW="1200px">
+        <Flex h="48px" align="center" justify="space-between">
+          {/* Logo - simple text, no fuss */}
           <Link
             as={RouterLink}
             to="/"
-            fontFamily="heading"
-            fontSize="xl"
-            fontWeight="bold"
-            color="luxury.navy"
-            _hover={{ textDecoration: 'none', color: 'luxury.gold' }}
+            fontSize="21px"
+            fontWeight="600"
+            color="neutral.800"
+            letterSpacing="-0.01em"
+            _hover={{ textDecoration: 'none', opacity: 0.7 }}
+            transition="opacity 0.2s ease"
           >
             PropertyForSale
           </Link>
 
-          {/* Desktop Navigation */}
-          <HStack spacing={8} display={{ base: 'none', md: 'flex' }}>
-            <Link as={RouterLink} to="/properties">
-              Properties
-            </Link>
-            <Link as={RouterLink} to="/about">
-              About
-            </Link>
-            <Link as={RouterLink} to="/contact">
-              Contact
-            </Link>
+          {/* Desktop Navigation - minimal, evenly spaced */}
+          <HStack
+            spacing={8}
+            display={{ base: 'none', md: 'flex' }}
+            position="absolute"
+            left="50%"
+            transform="translateX(-50%)"
+          >
+            <NavLink to="/properties">Properties</NavLink>
+            <NavLink to="/about">About</NavLink>
+            <NavLink to="/contact">Contact</NavLink>
           </HStack>
 
-          {/* Actions */}
-          <HStack spacing={4}>
-            <IconButton
-              aria-label="Toggle color mode"
-              icon={colorMode === 'light' ? <FiMoon /> : <FiSun />}
-              onClick={toggleColorMode}
-              variant="ghost"
-              size="sm"
-            />
-
+          {/* Actions - clean, minimal */}
+          <HStack spacing={3}>
             {isAuthenticated && user ? (
               <Menu>
                 <MenuButton
@@ -90,24 +78,51 @@ export default function Header() {
                   size="sm"
                   p={0}
                   borderRadius="full"
+                  minW="auto"
                 >
                   <Avatar
                     size="sm"
                     name={user.name}
                     src={user.avatar_url}
-                    bg="luxury.gold"
+                    bg="neutral.800"
                     color="white"
                   />
                 </MenuButton>
-                <MenuList>
-                  <MenuItem icon={<FiUser />} as={RouterLink} to="/dashboard/profile">
-                    {user.name || user.email}
+                <MenuList
+                  borderRadius="xl"
+                  boxShadow="lg"
+                  border="1px solid"
+                  borderColor="neutral.200"
+                  py={2}
+                >
+                  <Box px={4} py={2}>
+                    <Text fontWeight="600" fontSize="14px">{user.name}</Text>
+                    <Text fontSize="12px" color="neutral.400">{user.email}</Text>
+                  </Box>
+                  <MenuDivider borderColor="neutral.200" />
+                  <MenuItem
+                    icon={<FiUser size={16} />}
+                    as={RouterLink}
+                    to="/dashboard/profile"
+                    fontSize="14px"
+                  >
+                    Profile
                   </MenuItem>
-                  <MenuItem icon={<FiGrid />} as={RouterLink} to="/dashboard">
+                  <MenuItem
+                    icon={<FiGrid size={16} />}
+                    as={RouterLink}
+                    to="/dashboard"
+                    fontSize="14px"
+                  >
                     Dashboard
                   </MenuItem>
-                  <MenuDivider />
-                  <MenuItem icon={<FiLogOut />} onClick={handleLogout}>
+                  <MenuDivider borderColor="neutral.200" />
+                  <MenuItem
+                    icon={<FiLogOut size={16} />}
+                    onClick={handleLogout}
+                    fontSize="14px"
+                    color="red.500"
+                  >
                     Sign Out
                   </MenuItem>
                 </MenuList>
@@ -116,9 +131,11 @@ export default function Header() {
               <Button
                 as={RouterLink}
                 to="/login"
-                variant="outline"
                 size="sm"
+                variant="dark"
                 display={{ base: 'none', md: 'inline-flex' }}
+                fontSize="12px"
+                px={4}
               >
                 Sign In
               </Button>
@@ -130,10 +147,28 @@ export default function Header() {
               variant="ghost"
               size="sm"
               display={{ base: 'flex', md: 'none' }}
+              color="neutral.800"
             />
           </HStack>
         </Flex>
       </Container>
     </Box>
+  )
+}
+
+// Simple nav link component
+function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <Link
+      as={RouterLink}
+      to={to}
+      fontSize="12px"
+      fontWeight="400"
+      color="neutral.800"
+      _hover={{ opacity: 0.7, textDecoration: 'none' }}
+      transition="opacity 0.2s ease"
+    >
+      {children}
+    </Link>
   )
 }

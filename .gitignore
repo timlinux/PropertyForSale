@@ -51,6 +51,12 @@ result
 result-*
 .direnv/
 
+# Local development data
+.pgdata/
+.redis/
+.minio/
+.go/
+
 # Frontend
 frontend/node_modules/
 frontend/dist/

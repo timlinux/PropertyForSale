@@ -21,6 +21,10 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 }
 
 func (r *userRepository) Create(ctx context.Context, u *user.User) error {
+	// Generate UUID if not set (SQLite doesn't support gen_random_uuid())
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
 	return r.db.WithContext(ctx).Create(u).Error
 }
 
@@ -60,6 +64,10 @@ func (r *userRepository) Update(ctx context.Context, u *user.User) error {
 // Session management
 
 func (r *userRepository) CreateSession(ctx context.Context, s *user.Session) error {
+	// Generate UUID if not set (SQLite doesn't support gen_random_uuid())
+	if s.ID == uuid.Nil {
+		s.ID = uuid.New()
+	}
 	return r.db.WithContext(ctx).Create(s).Error
 }
 

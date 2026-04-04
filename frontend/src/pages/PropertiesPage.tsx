@@ -13,7 +13,7 @@ import {
   Center,
   Image,
   Badge,
-  HStack,
+  Flex,
 } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
 import { api, Property } from '../api'
@@ -25,31 +25,57 @@ export default function PropertiesPage() {
   })
 
   return (
-    <Container maxW="container.xl" py={12}>
-      <VStack spacing={8} align="stretch">
-        <VStack spacing={2} align="flex-start">
-          <Heading>Properties</Heading>
-          <Text color="gray.600">
-            Explore our curated selection of premium properties
-          </Text>
-        </VStack>
+    <Box bg="white" minH="100vh">
+      {/* Page header - clean, minimal */}
+      <Box pt={{ base: 16, md: 24 }} pb={{ base: 12, md: 16 }}>
+        <Container maxW="1200px" textAlign="center">
+          <VStack spacing={4}>
+            <Text
+              fontSize="12px"
+              fontWeight="600"
+              textTransform="uppercase"
+              letterSpacing="0.08em"
+              color="neutral.400"
+            >
+              Browse
+            </Text>
+            <Heading as="h1" size="3xl">
+              Properties
+            </Heading>
+            <Text fontSize="19px" color="neutral.400" maxW="500px">
+              Explore our curated selection of premium properties.
+            </Text>
+          </VStack>
+        </Container>
+      </Box>
 
+      {/* Properties grid */}
+      <Container maxW="1200px" pb={24}>
         {isLoading ? (
-          <Center minH="200px">
-            <Spinner size="xl" color="luxury.gold" />
+          <Center minH="300px">
+            <Spinner size="lg" color="neutral.400" thickness="2px" />
           </Center>
         ) : (
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={8}>
             {data?.data?.map((property: Property) => (
               <PropertyCard key={property.id} property={property} />
             ))}
             {(!data?.data || data.data.length === 0) && (
-              <Text color="gray.500">No properties available yet.</Text>
+              <Box gridColumn={{ md: 'span 2', lg: 'span 3' }} textAlign="center" py={16}>
+                <VStack spacing={4}>
+                  <Text color="neutral.400" fontSize="19px">
+                    No properties available yet.
+                  </Text>
+                  <Text color="neutral.300" fontSize="14px">
+                    Check back soon for new listings.
+                  </Text>
+                </VStack>
+              </Box>
             )}
           </SimpleGrid>
         )}
-      </VStack>
-    </Container>
+      </Container>
+    </Box>
   )
 }
 
@@ -62,45 +88,66 @@ function PropertyCard({ property }: PropertyCardProps) {
     <Box
       as={RouterLink}
       to={`/property/${property.slug}`}
-      bg="white"
-      borderRadius="lg"
+      display="block"
+      borderRadius="2xl"
       overflow="hidden"
-      boxShadow="md"
-      _hover={{ transform: 'translateY(-4px)', boxShadow: 'lg' }}
-      transition="all 0.2s"
+      bg="white"
+      transition="all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)"
+      _hover={{
+        transform: 'scale(1.02)',
+        '& .property-image': {
+          transform: 'scale(1.05)',
+        },
+      }}
     >
-      {/* Image */}
-      <Box h="200px" bg="gray.200" position="relative">
+      {/* Image container */}
+      <Box
+        h={{ base: '240px', md: '280px' }}
+        bg="neutral.100"
+        position="relative"
+        overflow="hidden"
+        borderRadius="2xl"
+      >
         <Image
-          src={`https://picsum.photos/seed/${property.id}/400/200`}
+          className="property-image"
+          src={`https://picsum.photos/seed/${property.id}/600/400`}
           alt={property.name}
           objectFit="cover"
           w="full"
           h="full"
+          transition="transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)"
         />
-        <Badge
-          position="absolute"
-          top={3}
-          right={3}
-          colorScheme={property.status === 'published' ? 'green' : 'gray'}
-        >
-          {property.status}
-        </Badge>
+        {property.status !== 'published' && (
+          <Badge
+            position="absolute"
+            top={4}
+            left={4}
+            bg="white"
+            color="neutral.600"
+            fontSize="11px"
+            fontWeight="500"
+            px={3}
+            py={1}
+            borderRadius="full"
+          >
+            {property.status}
+          </Badge>
+        )}
       </Box>
 
-      {/* Content */}
-      <VStack p={4} align="stretch" spacing={2}>
-        <Heading size="md" noOfLines={1}>
+      {/* Content - clean, minimal */}
+      <VStack p={4} align="stretch" spacing={1}>
+        <Text fontSize="17px" fontWeight="600" color="neutral.800" noOfLines={1}>
           {property.name}
-        </Heading>
-        <Text color="gray.600" fontSize="sm" noOfLines={1}>
-          {property.city}, {property.country}
         </Text>
-        <HStack justify="space-between" align="flex-end">
-          <Text fontWeight="bold" color="luxury.gold" fontSize="lg">
-            {property.currency} {property.price_min?.toLocaleString()}
+        <Text color="neutral.400" fontSize="14px" noOfLines={1}>
+          {property.city}{property.city && property.country ? ', ' : ''}{property.country}
+        </Text>
+        <Flex justify="space-between" align="center" pt={1}>
+          <Text fontWeight="600" color="neutral.800" fontSize="17px">
+            {property.currency || 'EUR'} {property.price_min?.toLocaleString() || '—'}
           </Text>
-        </HStack>
+        </Flex>
       </VStack>
     </Box>
   )

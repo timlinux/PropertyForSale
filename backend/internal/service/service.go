@@ -4,7 +4,6 @@
 package service
 
 import (
-	"github.com/redis/go-redis/v9"
 	"github.com/timlinux/PropertyForSale/backend/internal/config"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
 )
@@ -22,14 +21,15 @@ type Services struct {
 }
 
 // NewServices creates a new Services instance with all implementations
-func NewServices(repos *repository.Repositories, rdb *redis.Client, cfg *config.Config) *Services {
+// The second parameter is kept for backwards compatibility but is no longer used (was Redis)
+func NewServices(repos *repository.Repositories, _ interface{}, cfg *config.Config) *Services {
 	return &Services{
 		Property:  NewPropertyService(repos.Property, repos.Content),
 		Dwelling:  NewDwellingService(repos.Dwelling, repos.Content),
 		Room:      NewRoomService(repos.Room, repos.Content),
 		Area:      NewAreaService(repos.Area, repos.Content),
 		Media:     NewMediaService(repos.Media, cfg),
-		Auth:      NewAuthService(repos.User, rdb, cfg),
+		Auth:      NewAuthService(repos.User, cfg),
 		Analytics: NewAnalyticsService(repos.Analytics, cfg),
 		Content:   NewContentService(repos.Content, repos.Property),
 	}

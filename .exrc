@@ -1,48 +1,39 @@
 " PropertyForSale Neovim Project Configuration
 " Leader key shortcuts under <leader>p
 
-" Ensure which-key is loaded for descriptions
+" Ensure which-key is loaded for descriptions (new spec format)
 lua << EOF
 local ok, wk = pcall(require, "which-key")
 if ok then
-  wk.register({
-    p = {
-      name = "PropertyForSale",
-      -- Development
-      d = { ":!nix run .#dev<CR>", "Start dev services" },
-      b = { ":!cd backend && air<CR>", "Start backend (hot reload)" },
-      f = { ":!cd frontend && npm run dev<CR>", "Start frontend" },
-
-      -- Building
-      B = { ":!nix run .#build<CR>", "Build production" },
-
-      -- Testing
-      t = { ":!cd backend && go test ./...<CR>", "Run backend tests" },
-      T = { ":!cd frontend && npm test<CR>", "Run frontend tests" },
-      a = { ":!nix run .#test<CR>", "Run all tests" },
-
-      -- Linting
-      l = { ":!nix run .#lint<CR>", "Run all linters" },
-      g = { ":!cd backend && golangci-lint run<CR>", "Go lint" },
-      e = { ":!cd frontend && npm run lint<CR>", "ESLint" },
-
-      -- Database
-      m = { ":!nix run .#migrate up<CR>", "Run migrations up" },
-      M = { ":!nix run .#migrate down<CR>", "Run migrations down" },
-
-      -- Documentation
-      o = { ":!nix run .#docs<CR>", "Serve documentation" },
-
-      -- Git
-      s = { ":!git status<CR>", "Git status" },
-      c = { ":!git add -A && git commit<CR>", "Git commit" },
-
-      -- Code navigation
-      r = { ":e backend/internal/router/router.go<CR>", "Open router" },
-      h = { ":e backend/internal/handler/<CR>", "Open handlers" },
-      v = { ":e backend/internal/service/<CR>", "Open services" },
-    },
-  }, { prefix = "<leader>" })
+  wk.add({
+    { "<leader>p", group = "PropertyForSale" },
+    -- Development
+    { "<leader>pd", "<cmd>!nix run .#dev<cr>", desc = "Start dev services" },
+    { "<leader>pb", "<cmd>terminal cd backend && air<cr>", desc = "Backend hot reload" },
+    { "<leader>pf", "<cmd>terminal cd frontend && npm run dev<cr>", desc = "Frontend dev" },
+    -- Building
+    { "<leader>pB", "<cmd>!nix run .#build<cr>", desc = "Build production" },
+    -- Testing
+    { "<leader>pt", "<cmd>terminal cd backend && go test ./...<cr>", desc = "Backend tests" },
+    { "<leader>pT", "<cmd>terminal cd frontend && npm test<cr>", desc = "Frontend tests" },
+    { "<leader>pa", "<cmd>!nix run .#test<cr>", desc = "Run all tests" },
+    -- Linting
+    { "<leader>pl", "<cmd>!nix run .#lint<cr>", desc = "Lint all" },
+    { "<leader>pg", "<cmd>terminal cd backend && golangci-lint run<cr>", desc = "Go lint" },
+    { "<leader>pe", "<cmd>terminal cd frontend && npm run lint<cr>", desc = "ESLint" },
+    -- Database
+    { "<leader>pm", "<cmd>!nix run .#migrate up<cr>", desc = "Migrate up" },
+    { "<leader>pM", "<cmd>!nix run .#migrate down<cr>", desc = "Migrate down" },
+    -- Documentation
+    { "<leader>po", "<cmd>terminal nix run .#docs<cr>", desc = "Serve docs" },
+    -- Git
+    { "<leader>ps", "<cmd>!git status<cr>", desc = "Git status" },
+    { "<leader>pc", "<cmd>!git add -A && git commit<cr>", desc = "Git commit" },
+    -- Code navigation
+    { "<leader>pr", "<cmd>e backend/internal/router/router.go<cr>", desc = "Open router" },
+    { "<leader>ph", "<cmd>e backend/internal/handler/<cr>", desc = "Open handlers" },
+    { "<leader>pv", "<cmd>e backend/internal/service/<cr>", desc = "Open services" },
+  })
 end
 EOF
 

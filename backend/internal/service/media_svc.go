@@ -7,13 +7,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/timlinux/PropertyForSale/backend/internal/config"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/media"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
@@ -22,24 +21,20 @@ import (
 // MediaService handles media business logic
 type MediaService struct {
 	mediaRepo   repository.MediaRepository
-	minioClient *minio.Client
+	storagePath string
 	cfg         *config.Config
 }
 
 // NewMediaService creates a new media service
 func NewMediaService(mediaRepo repository.MediaRepository, cfg *config.Config) *MediaService {
-	// Initialize MinIO client
-	client, err := minio.New(cfg.S3.Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.S3.AccessKey, cfg.S3.SecretKey, ""),
-		Secure: cfg.S3.UseSSL,
-	})
-	if err != nil {
-		fmt.Printf("Warning: failed to initialize MinIO client: %v\n", err)
+	// Ensure storage directory exists
+	if err := os.MkdirAll(cfg.Storage.Path, 0755); err != nil {
+		fmt.Printf("Warning: failed to create storage directory: %v\n", err)
 	}
 
 	return &MediaService{
 		mediaRepo:   mediaRepo,
-		minioClient: client,
+		storagePath: cfg.Storage.Path,
 		cfg:         cfg,
 	}
 }
@@ -62,29 +57,38 @@ func (s *MediaService) Upload(ctx context.Context, input UploadInput) (*media.Me
 
 	// Generate unique file path
 	ext := filepath.Ext(input.FileName)
-	objectName := fmt.Sprintf("%s/%s/%s%s",
-		input.EntityType,
+	fileID := uuid.New().String()
+	relativePath := filepath.Join(
+		string(input.EntityType),
 		input.EntityID.String(),
-		uuid.New().String(),
-		ext,
+		fileID+ext,
 	)
 
-	// Upload to MinIO
-	if s.minioClient != nil {
-		_, err := s.minioClient.PutObject(ctx, s.cfg.S3.Bucket, objectName, input.File, input.FileSize, minio.PutObjectOptions{
-			ContentType: input.MimeType,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to upload file: %w", err)
-		}
+	// Full path on filesystem
+	fullPath := filepath.Join(s.storagePath, relativePath)
+
+	// Create directory structure
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Create media record
+	// Write file to disk
+	outFile, err := os.Create(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file: %w", err)
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, input.File); err != nil {
+		return nil, fmt.Errorf("failed to write file: %w", err)
+	}
+
+	// Create media record with URL pointing to our static file server
 	m := &media.Media{
 		EntityType: input.EntityType,
 		EntityID:   input.EntityID,
 		Type:       mediaType,
-		URL:        fmt.Sprintf("%s/%s", s.cfg.S3.PublicURLPrefix, objectName),
+		URL:        fmt.Sprintf("/api/v1/media/files/%s", relativePath),
 		FileName:   input.FileName,
 		FileSize:   input.FileSize,
 		MimeType:   input.MimeType,
@@ -92,6 +96,8 @@ func (s *MediaService) Upload(ctx context.Context, input UploadInput) (*media.Me
 	}
 
 	if err := s.mediaRepo.Create(ctx, m); err != nil {
+		// Clean up file on failure
+		os.Remove(fullPath)
 		return nil, fmt.Errorf("failed to create media record: %w", err)
 	}
 
@@ -148,12 +154,11 @@ func (s *MediaService) Delete(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("media not found: %w", err)
 	}
 
-	// Delete from S3
-	if s.minioClient != nil {
-		objectName := strings.TrimPrefix(m.URL, s.cfg.S3.PublicURLPrefix+"/")
-		if err := s.minioClient.RemoveObject(ctx, s.cfg.S3.Bucket, objectName, minio.RemoveObjectOptions{}); err != nil {
-			fmt.Printf("Warning: failed to delete from S3: %v\n", err)
-		}
+	// Delete file from filesystem
+	relativePath := strings.TrimPrefix(m.URL, "/api/v1/media/files/")
+	fullPath := filepath.Join(s.storagePath, relativePath)
+	if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
+		fmt.Printf("Warning: failed to delete file: %v\n", err)
 	}
 
 	return s.mediaRepo.Delete(ctx, id)

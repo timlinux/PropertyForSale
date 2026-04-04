@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/media"
 	"github.com/timlinux/PropertyForSale/backend/internal/middleware"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
@@ -142,11 +141,14 @@ func (h *PropertyHandler) GetBySlug(c *gin.Context) {
 	c.JSON(http.StatusOK, property)
 }
 
-// Update handles PUT /api/v1/properties/:id
+// Update handles PUT /api/v1/properties/:slug
 func (h *PropertyHandler) Update(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+	slug := c.Param("slug")
+
+	// Look up property by slug to get the ID
+	property, err := h.propertySvc.GetBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "property not found"})
 		return
 	}
 
@@ -170,24 +172,27 @@ func (h *PropertyHandler) Update(c *gin.Context) {
 		input.Description = &v
 	}
 
-	property, err := h.propertySvc.Update(c.Request.Context(), id, input, claims.UserID)
+	updated, err := h.propertySvc.Update(c.Request.Context(), property.ID, input, claims.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, property)
+	c.JSON(http.StatusOK, updated)
 }
 
-// Delete handles DELETE /api/v1/properties/:id
+// Delete handles DELETE /api/v1/properties/:slug
 func (h *PropertyHandler) Delete(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+	slug := c.Param("slug")
+
+	// Look up property by slug to get the ID
+	property, err := h.propertySvc.GetBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "property not found"})
 		return
 	}
 
-	if err := h.propertySvc.Delete(c.Request.Context(), id); err != nil {
+	if err := h.propertySvc.Delete(c.Request.Context(), property.ID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -195,15 +200,18 @@ func (h *PropertyHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
-// ListDwellings handles GET /api/v1/properties/:id/dwellings
+// ListDwellings handles GET /api/v1/properties/:slug/dwellings
 func (h *PropertyHandler) ListDwellings(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+	slug := c.Param("slug")
+
+	// Look up property by slug to get the ID
+	property, err := h.propertySvc.GetBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "property not found"})
 		return
 	}
 
-	dwellings, err := h.dwellingSvc.ListByPropertyID(c.Request.Context(), id)
+	dwellings, err := h.dwellingSvc.ListByPropertyID(c.Request.Context(), property.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -212,15 +220,18 @@ func (h *PropertyHandler) ListDwellings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": dwellings})
 }
 
-// ListAreas handles GET /api/v1/properties/:id/areas
+// ListAreas handles GET /api/v1/properties/:slug/areas
 func (h *PropertyHandler) ListAreas(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+	slug := c.Param("slug")
+
+	// Look up property by slug to get the ID
+	property, err := h.propertySvc.GetBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "property not found"})
 		return
 	}
 
-	areas, err := h.areaSvc.ListByPropertyID(c.Request.Context(), id)
+	areas, err := h.areaSvc.ListByPropertyID(c.Request.Context(), property.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -229,15 +240,18 @@ func (h *PropertyHandler) ListAreas(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": areas})
 }
 
-// ListMedia handles GET /api/v1/properties/:id/media
+// ListMedia handles GET /api/v1/properties/:slug/media
 func (h *PropertyHandler) ListMedia(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+	slug := c.Param("slug")
+
+	// Look up property by slug to get the ID
+	property, err := h.propertySvc.GetBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "property not found"})
 		return
 	}
 
-	items, err := h.mediaSvc.ListByEntity(c.Request.Context(), media.EntityTypeProperty, id)
+	items, err := h.mediaSvc.ListByEntity(c.Request.Context(), media.EntityTypeProperty, property.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

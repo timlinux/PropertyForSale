@@ -12,7 +12,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"github.com/timlinux/PropertyForSale/backend/internal/config"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/user"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
@@ -21,15 +20,13 @@ import (
 // AuthService handles authentication business logic
 type AuthService struct {
 	userRepo repository.UserRepository
-	rdb      *redis.Client
 	cfg      *config.Config
 }
 
 // NewAuthService creates a new auth service
-func NewAuthService(userRepo repository.UserRepository, rdb *redis.Client, cfg *config.Config) *AuthService {
+func NewAuthService(userRepo repository.UserRepository, cfg *config.Config) *AuthService {
 	return &AuthService{
 		userRepo: userRepo,
-		rdb:      rdb,
 		cfg:      cfg,
 	}
 }
@@ -143,6 +140,16 @@ func (s *AuthService) GetUserByID(ctx context.Context, id uuid.UUID) (*user.User
 	return s.userRepo.GetByID(ctx, id)
 }
 
+// UpdateUserRole updates a user's role (for dev mode)
+func (s *AuthService) UpdateUserRole(ctx context.Context, id uuid.UUID, role string) error {
+	u, err := s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	u.Role = user.Role(role)
+	return s.userRepo.Update(ctx, u)
+}
+
 func (s *AuthService) generateTokenPair(ctx context.Context, u *user.User) (*TokenPair, error) {
 	// Generate access token
 	expiresAt := time.Now().Add(time.Duration(s.cfg.Auth.JWTExpiry) * time.Minute)
@@ -169,7 +176,7 @@ func (s *AuthService) generateTokenPair(ctx context.Context, u *user.User) (*Tok
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
-	// Store session
+	// Store session in database
 	session := &user.Session{
 		UserID:       u.ID,
 		RefreshToken: refreshToken,

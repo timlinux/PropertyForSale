@@ -10,84 +10,123 @@ import {
   Link,
   Text,
   VStack,
-  useColorModeValue,
+  Divider,
+  SimpleGrid,
 } from '@chakra-ui/react'
 import { FiGithub, FiHeart } from 'react-icons/fi'
 
 export default function Footer() {
-  const bg = useColorModeValue('luxury.navy', 'gray.900')
-  const color = useColorModeValue('white', 'gray.100')
-
   return (
-    <Box as="footer" bg={bg} color={color} py={8}>
-      <Container maxW="container.xl">
-        <Flex
-          direction={{ base: 'column', md: 'row' }}
-          justify="space-between"
-          align="center"
-          gap={6}
-        >
-          {/* Left side */}
-          <VStack align={{ base: 'center', md: 'flex-start' }} spacing={2}>
-            <Text fontFamily="heading" fontSize="lg" fontWeight="bold">
+    <Box as="footer" bg="neutral.100" borderTop="1px solid" borderColor="neutral.200">
+      {/* Main footer content */}
+      <Container maxW="1200px" py={12}>
+        <SimpleGrid columns={{ base: 1, md: 4 }} spacing={8}>
+          {/* Brand */}
+          <VStack align={{ base: 'center', md: 'flex-start' }} spacing={3}>
+            <Text fontSize="12px" fontWeight="600" color="neutral.800">
               PropertyForSale
             </Text>
-            <Text fontSize="sm" opacity={0.8}>
-              Premium property sales platform
+            <Text fontSize="12px" color="neutral.400" maxW="200px" textAlign={{ base: 'center', md: 'left' }}>
+              Premium real estate platform with immersive experiences.
             </Text>
           </VStack>
 
-          {/* Center links */}
-          <HStack spacing={6} display={{ base: 'none', md: 'flex' }}>
-            <Link as={RouterLink} to="/properties" fontSize="sm">
-              Properties
-            </Link>
-            <Link as={RouterLink} to="/about" fontSize="sm">
-              About
-            </Link>
-            <Link as={RouterLink} to="/privacy" fontSize="sm">
-              Privacy
-            </Link>
-            <Link as={RouterLink} to="/terms" fontSize="sm">
-              Terms
-            </Link>
-          </HStack>
+          {/* Explore */}
+          <VStack align={{ base: 'center', md: 'flex-start' }} spacing={3}>
+            <Text fontSize="12px" fontWeight="600" color="neutral.800">
+              Explore
+            </Text>
+            <FooterLink to="/properties">Properties</FooterLink>
+            <FooterLink to="/about">About</FooterLink>
+            <FooterLink to="/contact">Contact</FooterLink>
+          </VStack>
 
-          {/* Right side - Kartoza attribution */}
-          <HStack spacing={1} fontSize="sm">
-            <Text>Made with</Text>
-            <Box as={FiHeart} color="red.400" />
-            <Text>by</Text>
-            <Link href="https://kartoza.com" isExternal color="luxury.gold">
-              Kartoza
-            </Link>
-            <Text>|</Text>
-            <Link
-              href="https://github.com/sponsors/timlinux"
-              isExternal
-              color="luxury.gold"
-            >
-              Donate!
-            </Link>
-            <Text>|</Text>
+          {/* Legal */}
+          <VStack align={{ base: 'center', md: 'flex-start' }} spacing={3}>
+            <Text fontSize="12px" fontWeight="600" color="neutral.800">
+              Legal
+            </Text>
+            <FooterLink to="/privacy">Privacy Policy</FooterLink>
+            <FooterLink to="/terms">Terms of Service</FooterLink>
+          </VStack>
+
+          {/* Connect */}
+          <VStack align={{ base: 'center', md: 'flex-start' }} spacing={3}>
+            <Text fontSize="12px" fontWeight="600" color="neutral.800">
+              Connect
+            </Text>
             <Link
               href="https://github.com/timlinux/PropertyForSale"
               isExternal
-              display="inline-flex"
+              fontSize="12px"
+              color="neutral.400"
+              _hover={{ color: 'neutral.800' }}
+              display="flex"
               alignItems="center"
               gap={1}
             >
-              <FiGithub />
+              <FiGithub size={12} />
               GitHub
             </Link>
-          </HStack>
-        </Flex>
-
-        {/* Copyright */}
-        <Text textAlign="center" fontSize="xs" mt={6} opacity={0.6}>
-          &copy; {new Date().getFullYear()} PropertyForSale. Licensed under EUPL-1.2.
-        </Text>
+            <Link
+              href="https://github.com/sponsors/timlinux"
+              isExternal
+              fontSize="12px"
+              color="neutral.400"
+              _hover={{ color: 'neutral.800' }}
+            >
+              Sponsor
+            </Link>
+          </VStack>
+        </SimpleGrid>
       </Container>
+
+      {/* Bottom bar */}
+      <Box borderTop="1px solid" borderColor="neutral.200">
+        <Container maxW="1200px" py={4}>
+          <Flex
+            direction={{ base: 'column', md: 'row' }}
+            justify="space-between"
+            align="center"
+            gap={4}
+          >
+            <Text fontSize="12px" color="neutral.400">
+              Copyright &copy; {new Date().getFullYear()} PropertyForSale. Licensed under EUPL-1.2.
+            </Text>
+
+            {/* Kartoza attribution */}
+            <HStack spacing={1} fontSize="12px" color="neutral.400">
+              <Text>Made with</Text>
+              <Box as={FiHeart} color="red.400" />
+              <Text>by</Text>
+              <Link
+                href="https://kartoza.com"
+                isExternal
+                color="neutral.800"
+                fontWeight="500"
+                _hover={{ color: 'accent.500' }}
+              >
+                Kartoza
+              </Link>
+            </HStack>
+          </Flex>
+        </Container>
+      </Box>
     </Box>
+  )
+}
+
+function FooterLink({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <Link
+      as={RouterLink}
+      to={to}
+      fontSize="12px"
+      color="neutral.400"
+      _hover={{ color: 'neutral.800', textDecoration: 'none' }}
+      transition="color 0.2s ease"
+    >
+      {children}
+    </Link>
   )
 }
