@@ -11,7 +11,7 @@ require (
 	github.com/markbates/goth v1.79.0
 	github.com/minio/minio-go/v7 v7.0.69
 	github.com/oschwald/geoip2-golang v1.9.0
-	github.com/redis/go-redis/v9 v9.5.1
+	github.com/redis/go-redis/v9 v9.5.5
 	github.com/rs/zerolog v1.32.0
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/gorm v1.25.7
