@@ -28,6 +28,7 @@ interface AuthState {
   setTokens: (tokens: Tokens | null) => void
   logout: () => void
   refreshTokens: () => Promise<void>
+  fetchUser: () => Promise<void>
 }
 
 const API_BASE = '/api/v1'

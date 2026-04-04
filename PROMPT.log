@@ -97,3 +97,29 @@ Implementing OAuth2 providers and user authentication:
 - Dashboard UI
 
 ---
+
+### Phase 3: Property Management Core
+
+Implementing hierarchical property management:
+- Property CRUD with full lifecycle (draft, published, archived)
+- Dwelling entities (houses, apartments, barns, etc.)
+- Room entities with floor assignment
+- Area entities (gardens, fields, outdoor spaces)
+- Media upload with MinIO/S3 integration
+- Content versioning with rollback support
+- Geographic data queries with PostGIS (radius search)
+- Complete API endpoints for all entity types
+- Full handler/service/repository implementations
+
+**Phase 3 Complete:**
+- Property CRUD with slug generation and geospatial queries
+- Hierarchical structure: Property → Dwellings → Rooms, Property → Areas
+- Media service with S3-compatible storage (MinIO)
+- Content versioning with version history and rollback
+- Authorization middleware with role-based access
+- All repositories implemented with GORM
+- API routes fully wired up
+- Fixed flake.nix for current nixpkgs (package name updates)
+- Backend and frontend both build successfully
+
+---

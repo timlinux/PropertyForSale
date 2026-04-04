@@ -31,6 +31,6 @@ func NewServices(repos *repository.Repositories, rdb *redis.Client, cfg *config.
 		Media:     NewMediaService(repos.Media, cfg),
 		Auth:      NewAuthService(repos.User, rdb, cfg),
 		Analytics: NewAnalyticsService(repos.Analytics, cfg),
-		Content:   NewContentService(repos.Content),
+		Content:   NewContentService(repos.Content, repos.Property),
 	}
 }

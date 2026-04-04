@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/timlinux/PropertyForSale/backend/internal/middleware"
 	"github.com/timlinux/PropertyForSale/backend/internal/service"
 )
 
@@ -66,8 +67,33 @@ func (h *VersionHandler) Get(c *gin.Context) {
 
 // Rollback handles POST /api/v1/versions/:entity_type/:entity_id/rollback/:version
 func (h *VersionHandler) Rollback(c *gin.Context) {
-	// Placeholder for rollback functionality
+	entityType := c.Param("entity_type")
+	entityID, err := uuid.Parse(c.Param("entity_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entity_id"})
+		return
+	}
+
+	version, err := strconv.Atoi(c.Param("version"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid version"})
+		return
+	}
+
+	claims, ok := middleware.GetUserFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	newVersion, err := h.contentSvc.Rollback(c.Request.Context(), entityType, entityID, version, claims.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Rollback endpoint - to be implemented",
+		"message": "Rollback successful",
+		"version": newVersion,
 	})
 }

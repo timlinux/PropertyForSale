@@ -63,10 +63,13 @@
             commitizen.enable = true;
 
             # Security checks
-            detect-private-key.enable = true;
+            detect-private-key = {
+              enable = true;
+              entry = "${pkgs.python312Packages.pre-commit-hooks}/bin/detect-private-key";
+            };
             check-added-large-files = {
               enable = true;
-              entry = "check-added-large-files --maxkb=1000";
+              entry = "${pkgs.python312Packages.pre-commit-hooks}/bin/check-added-large-files --maxkb=1000";
             };
 
             # License compliance
@@ -103,11 +106,9 @@
       {
         # Development shell
         devShells.default = pkgs.mkShell {
-          inherit (pre-commit-check) shellHook;
-
           buildInputs = with pkgs; [
             # Go development
-            go_1_22
+            go
             gopls
             golangci-lint
             gotools
@@ -117,15 +118,14 @@
 
             # Node.js/Frontend development
             nodejs_22
-            nodePackages.npm
-            nodePackages.typescript
-            nodePackages.typescript-language-server
-            nodePackages.prettier
-            nodePackages.eslint
+            typescript
+            typescript-language-server
+            prettierd
+            eslint
 
             # Database
             postgresql_16
-            postgis
+            postgresqlPackages.postgis
 
             # Redis
             redis
