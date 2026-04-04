@@ -1,0 +1,62 @@
+# PropertyForSale - Prompt Log
+
+## Session: 2026-04-04
+
+### Initial Project Request
+
+We are going to build a brand new application with these characteristics:
+
+1.  A nix flake that provides the development environment and also provides a
+    nixosanywhere framework for deploying onto a hetzner server, running the
+    site behind nginx with a certbot certificate and great security profile etc.
+2.  A web application written in go with a really nicely laid out backend
+    structure - using whatever the best go equivalent to pythons django framework
+    would be.
+3.  The web frontend written in reactjs and chakra css with the most
+    awe-inspiring css focussed around selling a property you can imagine.
+4.  Integrated map support using map lire
+5.  Support for 3d video play throughs that the user can interact with.
+6.  Support for viewing architectural house plans in 2d and 3d models (generated
+    from an autocad or similar file)
+7.  A landing page with key high level selling points (location, prince range,
+    summary, enticement pics)
+8.  A login using social auth using popular platforms including apple, github,
+    microsoft, github, facebook, etc.
+9.  Detailed backend analytics including a map that resolves ip addresses of
+    visitors to locations, dwell times, most popular information that people want
+    to access, exit points with insights into what prompts people to move.
+10. AB testing of each content section with writing in different styles and
+    levels of content detail. Also presenting this in terms of how pricing is presented.
+11. SEO and adwords campaign planning and management.
+12. Notifications of experssions of interests, daily performance summaries.
+13. A versioned content management system which lets you see the difference and
+    author of each change, rollbacks, etc. It should also let you upload media
+    including photos, videos, 3d videos, pdfs, sounds files.
+14. A guided page builder that walks you through the whole framework of building
+    the promotional site for a property. This will work in a heirachical way
+    eg. Define a property, add a dwelling or building, add rooms, add property areas
+    e.g. gardens or fields. etc. Each of these items should be able to have one or
+    more media files attached and if there is a sound file this should be able to be
+    set to autoplay when the user enters the information component. e.g. they enter
+    the garden view and we play ambient sounds from the garden. It should be
+    possible to navigate the property through an interactive localised map using
+    maplibre with hyperlinked features e.g. clicking on a dwelling takes you to the
+    dwelling sub page.
+
+---
+
+### Implementation Session: 2026-04-04
+
+Starting Phase 1: Foundation implementation
+- Initialize git repository
+- Create flake.nix with development environment
+- Set up pre-commit hooks
+- Create GitHub CI/CD workflows
+- Initialize Go backend with Gin + GORM
+- Initialize React frontend with Vite + Chakra UI
+- Set up PostgreSQL + PostGIS migrations
+- Create MkDocs structure
+- Create SPECIFICATION.md, PACKAGES.md, README.md
+- Create .exrc and .nvim.lua
+
+---

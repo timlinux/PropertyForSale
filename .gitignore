@@ -1,0 +1,80 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+*.test
+coverage.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+!PROMPT.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Nix
+result
+result-*
+.direnv/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.cache/
+
+# Documentation build
+docs/site/
+site/
+
+# Test coverage
+coverage/
+*.lcov
+
+# Compiled binary
+propertyforsale
+
+# Media uploads (development)
+uploads/
+media/
+
+# GeoIP database
+*.mmdb
+
+# Secrets
+*.pem
+*.key
+secrets/
