@@ -10,7 +10,6 @@ import {
   Link,
   Text,
   VStack,
-  Divider,
   SimpleGrid,
 } from '@chakra-ui/react'
 import { FiGithub, FiHeart } from 'react-icons/fi'

@@ -5,8 +5,12 @@ import { Outlet } from 'react-router-dom'
 import { Box, Flex } from '@chakra-ui/react'
 import Header from './Header'
 import Footer from './Footer'
+import { usePageTracking } from '../../hooks/usePageTracking'
 
 export default function Layout() {
+  // Track page views for analytics
+  usePageTracking()
+
   return (
     <Flex direction="column" minH="100vh">
       <Header />

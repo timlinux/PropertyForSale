@@ -21,9 +21,21 @@ import {
   SimpleGrid,
   Avatar,
   Badge,
+  Spinner,
+  Center,
+  Select,
 } from '@chakra-ui/react'
-import { FiHome, FiPlus, FiBarChart2, FiUsers } from 'react-icons/fi'
+import { FiHome, FiPlus, FiBarChart2, FiUsers, FiClock, FiEye } from 'react-icons/fi'
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useAuthStore } from '../context/authStore'
+import { api } from '../api'
+import {
+  StatCard as AnalyticsStatCard,
+  DeviceChart,
+  PageViewsChart,
+  VisitorMap,
+} from '../components/analytics'
 
 // Dashboard overview
 function DashboardOverview() {
@@ -197,16 +209,131 @@ function PropertiesPage() {
 }
 
 function AnalyticsPage() {
+  const [dateRange, setDateRange] = useState<string>('7d')
+
+  // Calculate date range
+  const getDateParams = () => {
+    const end = new Date()
+    const start = new Date()
+    switch (dateRange) {
+      case '24h':
+        start.setDate(start.getDate() - 1)
+        break
+      case '7d':
+        start.setDate(start.getDate() - 7)
+        break
+      case '30d':
+        start.setDate(start.getDate() - 30)
+        break
+      case '90d':
+        start.setDate(start.getDate() - 90)
+        break
+    }
+    return {
+      start_date: start.toISOString().split('T')[0],
+      end_date: end.toISOString().split('T')[0],
+    }
+  }
+
+  const dateParams = getDateParams()
+
+  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
+    queryKey: ['analytics-dashboard', dateRange],
+    queryFn: () => api.getDashboard(dateParams),
+  })
+
+  const { data: visitorData, isLoading: visitorLoading } = useQuery({
+    queryKey: ['analytics-visitors', dateRange],
+    queryFn: () => api.getVisitorMap(dateParams),
+  })
+
+  const formatDwellTime = (ms: number): string => {
+    if (ms < 1000) return '0s'
+    const seconds = Math.floor(ms / 1000)
+    if (seconds < 60) return `${seconds}s`
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}m ${remainingSeconds}s`
+  }
+
+  const isLoading = dashboardLoading || visitorLoading
+
   return (
-    <VStack spacing={6} align="stretch">
-      <Heading size="lg">Analytics</Heading>
-      <Card>
-        <CardBody>
-          <Text color="gray.500" textAlign="center" py={8}>
-            Analytics will appear here once you have properties with traffic.
+    <VStack spacing={8} align="stretch">
+      {/* Header */}
+      <HStack justify="space-between" align="center">
+        <VStack align="flex-start" spacing={1}>
+          <Text
+            fontSize="12px"
+            fontWeight="600"
+            textTransform="uppercase"
+            letterSpacing="0.08em"
+            color="neutral.400"
+          >
+            Insights
           </Text>
-        </CardBody>
-      </Card>
+          <Heading size="lg">Analytics</Heading>
+        </VStack>
+        <Select
+          value={dateRange}
+          onChange={(e) => setDateRange(e.target.value)}
+          w="160px"
+          size="sm"
+          borderRadius="full"
+          borderColor="neutral.200"
+          _focus={{ borderColor: 'neutral.400' }}
+        >
+          <option value="24h">Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="90d">Last 90 days</option>
+        </Select>
+      </HStack>
+
+      {isLoading ? (
+        <Center py={16}>
+          <Spinner size="lg" color="neutral.400" thickness="2px" />
+        </Center>
+      ) : (
+        <>
+          {/* Stats cards */}
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
+            <AnalyticsStatCard
+              label="Total Views"
+              value={dashboardData?.total_views ?? 0}
+              icon={<FiEye size={20} />}
+            />
+            <AnalyticsStatCard
+              label="Unique Sessions"
+              value={dashboardData?.unique_sessions ?? 0}
+              icon={<FiUsers size={20} />}
+            />
+            <AnalyticsStatCard
+              label="Avg. Dwell Time"
+              value={formatDwellTime(dashboardData?.avg_dwell_time_ms ?? 0)}
+              icon={<FiClock size={20} />}
+            />
+            <AnalyticsStatCard
+              label="Pages Tracked"
+              value={Object.keys(dashboardData?.page_view_counts ?? {}).length}
+              icon={<FiHome size={20} />}
+            />
+          </SimpleGrid>
+
+          {/* Charts row */}
+          <Grid templateColumns={{ base: '1fr', lg: '1fr 1fr' }} gap={4}>
+            <GridItem>
+              <PageViewsChart data={dashboardData?.page_view_counts ?? {}} />
+            </GridItem>
+            <GridItem>
+              <DeviceChart data={dashboardData?.device_breakdown ?? {}} />
+            </GridItem>
+          </Grid>
+
+          {/* Visitor map */}
+          <VisitorMap locations={visitorData?.data ?? []} />
+        </>
+      )}
     </VStack>
   )
 }

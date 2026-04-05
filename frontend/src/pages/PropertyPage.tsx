@@ -42,6 +42,7 @@ import {
 import { api, type Dwelling, type Area } from '../api'
 import PropertyMap from '../components/map/PropertyMap'
 import { MediaGallery, AmbientAudioPlayer } from '../components/media'
+import { usePageTracking } from '../hooks/usePageTracking'
 
 export default function PropertyPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -80,6 +81,9 @@ export default function PropertyPage() {
   const dwellings = dwellingsData?.data || []
   const areas = areasData?.data || []
   const allMedia = mediaData?.data || []
+
+  // Track property views for analytics
+  usePageTracking({ propertyId: property?.id })
 
   // Filter media by type
   const propertyMedia = useMemo(

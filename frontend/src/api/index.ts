@@ -103,6 +103,23 @@ export interface User {
   updated_at: string
 }
 
+// Analytics types
+export interface DashboardData {
+  total_views: number
+  unique_sessions: number
+  avg_dwell_time_ms: number
+  page_view_counts: Record<string, number>
+  device_breakdown: Record<string, number>
+}
+
+export interface VisitorLocation {
+  latitude: number
+  longitude: number
+  city: string
+  country: string
+  count: number
+}
+
 // Get auth headers from store
 function getAuthHeaders(): Record<string, string> {
   const tokens = useAuthStore.getState().tokens
@@ -337,7 +354,7 @@ export const api = {
     if (params?.start_date) searchParams.set('start_date', params.start_date)
     if (params?.end_date) searchParams.set('end_date', params.end_date)
     const query = searchParams.toString()
-    return fetchAPI(`/analytics/dashboard${query ? `?${query}` : ''}`, {
+    return fetchAPI<DashboardData>(`/analytics/dashboard${query ? `?${query}` : ''}`, {
       requireAuth: true,
     })
   },
@@ -348,7 +365,7 @@ export const api = {
     if (params?.start_date) searchParams.set('start_date', params.start_date)
     if (params?.end_date) searchParams.set('end_date', params.end_date)
     const query = searchParams.toString()
-    return fetchAPI(`/analytics/visitors/map${query ? `?${query}` : ''}`, {
+    return fetchAPI<{ data: VisitorLocation[] }>(`/analytics/visitors/map${query ? `?${query}` : ''}`, {
       requireAuth: true,
     })
   },
