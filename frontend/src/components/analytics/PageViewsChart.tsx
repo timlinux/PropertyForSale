@@ -1,7 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Tim Sutton <tim@kartoza.com>
 // SPDX-License-Identifier: EUPL-1.2
 
-import { Box, Text, Flex, VStack, HStack, Progress } from '@chakra-ui/react'
+import { Box, Text, Flex } from '@chakra-ui/react'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 
 interface PageViewsChartProps {
   data: Record<string, number>
@@ -16,8 +25,6 @@ export function PageViewsChart({ data }: PageViewsChartProps) {
     }))
     .sort((a, b) => b.views - a.views)
     .slice(0, 8)
-
-  const maxViews = chartData.length > 0 ? Math.max(...chartData.map(d => d.views)) : 1
 
   if (chartData.length === 0) {
     return (
@@ -66,27 +73,42 @@ export function PageViewsChart({ data }: PageViewsChartProps) {
       >
         Top Pages
       </Text>
-      <VStack spacing={3} align="stretch">
-        {chartData.map((item) => (
-          <HStack key={item.fullPath} spacing={3}>
-            <Text fontSize="13px" color="neutral.600" w="100px" noOfLines={1}>
-              {item.path}
-            </Text>
-            <Box flex={1}>
-              <Progress
-                value={(item.views / maxViews) * 100}
-                size="sm"
-                borderRadius="full"
-                bg="neutral.100"
-                sx={{ '& > div': { bg: 'neutral.800' } }}
-              />
-            </Box>
-            <Text fontSize="13px" fontWeight="500" color="neutral.800" w="40px" textAlign="right">
-              {item.views}
-            </Text>
-          </HStack>
-        ))}
-      </VStack>
+      <Box h="200px">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f5f5f7" />
+            <XAxis type="number" axisLine={false} tickLine={false} fontSize={12} />
+            <YAxis
+              type="category"
+              dataKey="path"
+              width={100}
+              axisLine={false}
+              tickLine={false}
+              fontSize={12}
+              tick={{ fill: '#6e6e73' }}
+            />
+            <Tooltip
+              contentStyle={{
+                borderRadius: '8px',
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                fontSize: '13px',
+              }}
+              labelFormatter={(_, payload) => payload[0]?.payload?.fullPath || ''}
+            />
+            <Bar
+              dataKey="views"
+              fill="#1d1d1f"
+              radius={[0, 4, 4, 0]}
+              maxBarSize={24}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </Box>
     </Box>
   )
 }

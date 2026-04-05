@@ -1,16 +1,17 @@
 // SPDX-FileCopyrightText: 2026 Tim Sutton <tim@kartoza.com>
 // SPDX-License-Identifier: EUPL-1.2
 
-import { Box, Text, Flex, VStack, HStack, Progress } from '@chakra-ui/react'
+import { Box, Text, Flex, VStack } from '@chakra-ui/react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface DeviceChartProps {
   data: Record<string, number>
 }
 
 const COLORS: Record<string, string> = {
-  desktop: 'neutral.800',
-  mobile: 'neutral.500',
-  tablet: 'neutral.300',
+  desktop: '#1d1d1f',
+  mobile: '#6e6e73',
+  tablet: '#d2d2d7',
 }
 
 const LABELS: Record<string, string> = {
@@ -23,7 +24,7 @@ export function DeviceChart({ data }: DeviceChartProps) {
   const chartData = Object.entries(data).map(([name, value]) => ({
     name: LABELS[name] || name,
     value,
-    color: COLORS[name] || 'neutral.400',
+    color: COLORS[name] || '#d2d2d7',
   }))
 
   const total = chartData.reduce((sum, item) => sum + item.value, 0)
@@ -75,33 +76,51 @@ export function DeviceChart({ data }: DeviceChartProps) {
       >
         Devices
       </Text>
-      <VStack spacing={4} align="stretch">
-        {chartData.map((item) => {
-          const percentage = Math.round((item.value / total) * 100)
-          return (
-            <Box key={item.name}>
-              <HStack justify="space-between" mb={1}>
-                <HStack spacing={2}>
-                  <Box w="10px" h="10px" borderRadius="full" bg={item.color} />
-                  <Text fontSize="14px" color="neutral.600">
-                    {item.name}
-                  </Text>
-                </HStack>
-                <Text fontSize="14px" fontWeight="500" color="neutral.800">
-                  {percentage}%
-                </Text>
-              </HStack>
-              <Progress
-                value={percentage}
-                size="sm"
-                borderRadius="full"
-                bg="neutral.100"
-                sx={{ '& > div': { bg: item.color } }}
+      <Flex gap={6} align="center">
+        <Box w="140px" h="140px">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                innerRadius={40}
+                outerRadius={65}
+                paddingAngle={2}
+                dataKey="value"
+                stroke="none"
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  borderRadius: '8px',
+                  border: 'none',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  fontSize: '13px',
+                }}
               />
-            </Box>
-          )
-        })}
-      </VStack>
+            </PieChart>
+          </ResponsiveContainer>
+        </Box>
+        <VStack align="stretch" spacing={3} flex={1}>
+          {chartData.map((item) => (
+            <Flex key={item.name} justify="space-between" align="center">
+              <Flex align="center" gap={2}>
+                <Box w="10px" h="10px" borderRadius="full" bg={item.color} />
+                <Text fontSize="14px" color="neutral.600">
+                  {item.name}
+                </Text>
+              </Flex>
+              <Text fontSize="14px" fontWeight="500" color="neutral.800">
+                {Math.round((item.value / total) * 100)}%
+              </Text>
+            </Flex>
+          ))}
+        </VStack>
+      </Flex>
     </Box>
   )
 }
