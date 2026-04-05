@@ -159,6 +159,79 @@ export interface ABVariantStats {
   avg_scroll_depth: number
 }
 
+// CMS Page types
+export type PageStatus = 'draft' | 'published' | 'archived'
+export type PageTemplate = 'blank' | 'landing' | 'property' | 'contact' | 'about'
+export type BlockType =
+  | 'hero'
+  | 'text'
+  | 'image'
+  | 'gallery'
+  | 'video'
+  | 'video360'
+  | 'features'
+  | 'pricing'
+  | 'testimonial'
+  | 'cta'
+  | 'contact'
+  | 'map'
+  | 'properties'
+  | 'divider'
+  | 'html'
+  | 'spacer'
+
+export interface Page {
+  id: string
+  slug: string
+  title: string
+  description: string
+  template: PageTemplate
+  status: PageStatus
+  meta_title: string
+  meta_description: string
+  og_image: string
+  version_number: number
+  author_id: string
+  published_at: string | null
+  created_at: string
+  updated_at: string
+  blocks?: PageBlock[]
+}
+
+export interface PageBlock {
+  id: string
+  page_id: string
+  block_type: BlockType
+  position: number
+  data: Record<string, unknown>
+  settings: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export interface PageVersion {
+  id: string
+  page_id: string
+  version_number: number
+  title: string
+  data: Record<string, unknown>
+  diff: Record<string, unknown> | null
+  author_id: string
+  note: string
+  created_at: string
+}
+
+export interface BlockTemplate {
+  id: string
+  name: string
+  description: string
+  block_type: BlockType
+  schema: Record<string, unknown>
+  default_data: Record<string, unknown>
+  thumbnail: string
+  created_at: string
+}
+
 // Get auth headers from store
 function getAuthHeaders(): Record<string, string> {
   const tokens = useAuthStore.getState().tokens
@@ -468,5 +541,137 @@ export const api = {
     fetchAPI<{ variant_id: string; variant: ABVariant }>(`/ab-tests/${testId}/assign`, {
       method: 'POST',
       body: JSON.stringify({ session_id: sessionId }),
+    }),
+
+  // CMS Pages
+  getPages: (params?: { status?: string; template?: string; search?: string; offset?: number; limit?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.template) searchParams.set('template', params.template)
+    if (params?.search) searchParams.set('search', params.search)
+    if (params?.offset) searchParams.set('offset', String(params.offset))
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    const query = searchParams.toString()
+    return fetchAPI<{ pages: Page[]; total: number }>(`/pages${query ? `?${query}` : ''}`, {
+      requireAuth: true,
+    })
+  },
+
+  getPage: (id: string) =>
+    fetchAPI<Page>(`/pages/${id}`, { requireAuth: true }),
+
+  getPublicPage: (slug: string) =>
+    fetchAPI<Page>(`/pages/public/${slug}`),
+
+  createPage: (data: {
+    slug: string
+    title: string
+    description?: string
+    template?: PageTemplate
+    meta_title?: string
+    meta_description?: string
+    og_image?: string
+  }) =>
+    fetchAPI<Page>('/pages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  updatePage: (id: string, data: Partial<Page>) =>
+    fetchAPI<Page>(`/pages/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  deletePage: (id: string) =>
+    fetchAPI<void>(`/pages/${id}`, {
+      method: 'DELETE',
+      requireAuth: true,
+    }),
+
+  publishPage: (id: string) =>
+    fetchAPI<{ message: string }>(`/pages/${id}/publish`, {
+      method: 'POST',
+      requireAuth: true,
+    }),
+
+  unpublishPage: (id: string) =>
+    fetchAPI<{ message: string }>(`/pages/${id}/unpublish`, {
+      method: 'POST',
+      requireAuth: true,
+    }),
+
+  // Page Blocks
+  createBlock: (pageId: string, data: {
+    block_type: BlockType
+    position?: number
+    data?: Record<string, unknown>
+    settings?: Record<string, unknown>
+  }) =>
+    fetchAPI<PageBlock>(`/pages/${pageId}/blocks`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  updateBlock: (pageId: string, blockId: string, data: Partial<PageBlock>) =>
+    fetchAPI<PageBlock>(`/pages/${pageId}/blocks/${blockId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  deleteBlock: (pageId: string, blockId: string) =>
+    fetchAPI<void>(`/pages/${pageId}/blocks/${blockId}`, {
+      method: 'DELETE',
+      requireAuth: true,
+    }),
+
+  reorderBlocks: (pageId: string, blockIds: string[]) =>
+    fetchAPI<{ message: string }>(`/pages/${pageId}/blocks/reorder`, {
+      method: 'POST',
+      body: JSON.stringify({ block_ids: blockIds }),
+      requireAuth: true,
+    }),
+
+  // Page Versions
+  getPageVersions: (pageId: string) =>
+    fetchAPI<PageVersion[]>(`/pages/${pageId}/versions`, { requireAuth: true }),
+
+  getPageVersion: (pageId: string, version: number) =>
+    fetchAPI<PageVersion>(`/pages/${pageId}/versions/${version}`, { requireAuth: true }),
+
+  rollbackPageVersion: (pageId: string, version: number) =>
+    fetchAPI<{ message: string }>(`/pages/${pageId}/versions/${version}/rollback`, {
+      method: 'POST',
+      requireAuth: true,
+    }),
+
+  // Block Templates
+  getBlockTemplates: (blockType?: string) => {
+    const query = blockType ? `?block_type=${blockType}` : ''
+    return fetchAPI<BlockTemplate[]>(`/block-templates${query}`, { requireAuth: true })
+  },
+
+  createBlockTemplate: (data: {
+    name: string
+    description?: string
+    block_type: BlockType
+    schema?: Record<string, unknown>
+    default_data?: Record<string, unknown>
+    thumbnail?: string
+  }) =>
+    fetchAPI<BlockTemplate>('/block-templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  deleteBlockTemplate: (id: string) =>
+    fetchAPI<void>(`/block-templates/${id}`, {
+      method: 'DELETE',
+      requireAuth: true,
     }),
 }

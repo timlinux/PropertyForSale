@@ -21,6 +21,7 @@ type Handlers struct {
 	Version   *VersionHandler
 	ABTest    *ABTestHandler
 	SEO       *SEOHandler
+	Page      *PageHandler
 }
 
 // NewHandlers creates a new Handlers instance with all implementations
@@ -36,5 +37,6 @@ func NewHandlers(services *service.Services, repos *repository.Repositories, cfg
 		Version:   NewVersionHandler(services.Content),
 		ABTest:    NewABTestHandler(repos.Analytics),
 		SEO:       NewSEOHandler(repos.Property, cfg),
+		Page:      NewPageHandler(repos.Page),
 	}
 }

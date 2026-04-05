@@ -207,6 +207,45 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 		{
 			seo.GET("/property/:slug", handlers.SEO.GetPropertyMeta)
 		}
+
+		// CMS Page routes (public)
+		pages := v1.Group("/pages")
+		{
+			pages.GET("/public/:slug", handlers.Page.GetPublicPage)
+		}
+
+		// CMS Page routes (authenticated)
+		pagesAuth := v1.Group("/pages")
+		pagesAuth.Use(middleware.RequireAuth(cfg), middleware.RequireRole("admin"))
+		{
+			pagesAuth.GET("", handlers.Page.ListPages)
+			pagesAuth.POST("", handlers.Page.CreatePage)
+			pagesAuth.GET("/:id", handlers.Page.GetPage)
+			pagesAuth.PUT("/:id", handlers.Page.UpdatePage)
+			pagesAuth.DELETE("/:id", handlers.Page.DeletePage)
+			pagesAuth.POST("/:id/publish", handlers.Page.PublishPage)
+			pagesAuth.POST("/:id/unpublish", handlers.Page.UnpublishPage)
+
+			// Block routes
+			pagesAuth.POST("/:id/blocks", handlers.Page.CreateBlock)
+			pagesAuth.PUT("/:id/blocks/:blockId", handlers.Page.UpdateBlock)
+			pagesAuth.DELETE("/:id/blocks/:blockId", handlers.Page.DeleteBlock)
+			pagesAuth.POST("/:id/blocks/reorder", handlers.Page.ReorderBlocks)
+
+			// Version routes
+			pagesAuth.GET("/:id/versions", handlers.Page.ListVersions)
+			pagesAuth.GET("/:id/versions/:version", handlers.Page.GetVersion)
+			pagesAuth.POST("/:id/versions/:version/rollback", handlers.Page.RollbackToVersion)
+		}
+
+		// Block template routes
+		blockTemplates := v1.Group("/block-templates")
+		blockTemplates.Use(middleware.RequireAuth(cfg), middleware.RequireRole("admin"))
+		{
+			blockTemplates.GET("", handlers.Page.ListBlockTemplates)
+			blockTemplates.POST("", handlers.Page.CreateBlockTemplate)
+			blockTemplates.DELETE("/:id", handlers.Page.DeleteBlockTemplate)
+		}
 	}
 
 	// Root-level SEO routes (sitemap.xml, robots.txt)

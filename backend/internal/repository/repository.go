@@ -10,6 +10,7 @@ import (
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/analytics"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/content"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/media"
+	"github.com/timlinux/PropertyForSale/backend/internal/domain/page"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/property"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/user"
 	"gorm.io/gorm"
@@ -25,6 +26,7 @@ type Repositories struct {
 	User      UserRepository
 	Analytics AnalyticsRepository
 	Content   ContentRepository
+	Page      PageRepository
 }
 
 // NewRepositories creates a new Repositories instance with all implementations
@@ -38,6 +40,7 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		User:      NewUserRepository(db),
 		Analytics: NewAnalyticsRepository(db),
 		Content:   NewContentRepository(db),
+		Page:      NewPageRepository(db),
 	}
 }
 
@@ -159,6 +162,41 @@ type ContentRepository interface {
 	GetVersion(ctx context.Context, entityType string, entityID uuid.UUID, version int) (*content.ContentVersion, error)
 	GetLatestVersion(ctx context.Context, entityType string, entityID uuid.UUID) (*content.ContentVersion, error)
 	ListVersions(ctx context.Context, entityType string, entityID uuid.UUID) ([]content.ContentVersion, error)
+}
+
+// PageRepository defines CMS page data access operations
+type PageRepository interface {
+	// Page CRUD
+	Create(ctx context.Context, p *page.Page) error
+	GetByID(ctx context.Context, id uuid.UUID) (*page.Page, error)
+	GetBySlug(ctx context.Context, slug string) (*page.Page, error)
+	List(ctx context.Context, opts PageListOptions) ([]page.Page, int64, error)
+	Update(ctx context.Context, p *page.Page) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	Publish(ctx context.Context, id uuid.UUID) error
+	Unpublish(ctx context.Context, id uuid.UUID) error
+
+	// Block operations
+	CreateBlock(ctx context.Context, block *page.PageBlock) error
+	GetBlock(ctx context.Context, id uuid.UUID) (*page.PageBlock, error)
+	ListBlocks(ctx context.Context, pageID uuid.UUID) ([]page.PageBlock, error)
+	UpdateBlock(ctx context.Context, block *page.PageBlock) error
+	DeleteBlock(ctx context.Context, id uuid.UUID) error
+	ReorderBlocks(ctx context.Context, pageID uuid.UUID, blockIDs []uuid.UUID) error
+
+	// Version operations
+	CreateVersion(ctx context.Context, v *page.PageVersion) error
+	GetVersion(ctx context.Context, pageID uuid.UUID, versionNumber int) (*page.PageVersion, error)
+	ListVersions(ctx context.Context, pageID uuid.UUID) ([]page.PageVersion, error)
+	GetLatestVersionNumber(ctx context.Context, pageID uuid.UUID) (int, error)
+	SavePageSnapshot(ctx context.Context, pageID uuid.UUID, authorID uuid.UUID, note string) error
+	RollbackToVersion(ctx context.Context, pageID uuid.UUID, versionNumber int) error
+
+	// Block template operations
+	CreateBlockTemplate(ctx context.Context, t *page.BlockTemplate) error
+	GetBlockTemplate(ctx context.Context, id uuid.UUID) (*page.BlockTemplate, error)
+	ListBlockTemplates(ctx context.Context, blockType string) ([]page.BlockTemplate, error)
+	DeleteBlockTemplate(ctx context.Context, id uuid.UUID) error
 }
 
 // ListOptions contains common listing parameters

@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage'
 import DevLoginPage from './pages/DevLoginPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
+import { CMSPage } from './pages/CMSPage'
 import { useAuthStore } from './context/authStore'
 
 // Protected route wrapper
@@ -19,6 +20,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
+
+// Admin route wrapper (requires admin role)
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const user = useAuthStore((state) => state.user)
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (user?.role !== 'admin') {
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>
@@ -41,6 +58,14 @@ function App() {
               <ProtectedRoute>
                 <DashboardPage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/cms"
+            element={
+              <AdminRoute>
+                <CMSPage />
+              </AdminRoute>
             }
           />
         </Route>

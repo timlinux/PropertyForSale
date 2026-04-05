@@ -235,6 +235,65 @@ func runMigrations(db *gorm.DB) error {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 
+		// CMS Pages table
+		`CREATE TABLE IF NOT EXISTS pages (
+			id TEXT PRIMARY KEY,
+			slug TEXT UNIQUE NOT NULL,
+			title TEXT NOT NULL,
+			description TEXT,
+			template TEXT DEFAULT 'blank',
+			status TEXT DEFAULT 'draft',
+			meta_title TEXT,
+			meta_desc TEXT,
+			og_image TEXT,
+			version_number INTEGER DEFAULT 1,
+			author_id TEXT,
+			published_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (author_id) REFERENCES users(id)
+		)`,
+
+		// Page blocks table
+		`CREATE TABLE IF NOT EXISTS page_blocks (
+			id TEXT PRIMARY KEY,
+			page_id TEXT NOT NULL,
+			block_type TEXT NOT NULL,
+			position INTEGER NOT NULL,
+			data TEXT,
+			settings TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
+		)`,
+
+		// Page versions table
+		`CREATE TABLE IF NOT EXISTS page_versions (
+			id TEXT PRIMARY KEY,
+			page_id TEXT NOT NULL,
+			version_number INTEGER NOT NULL,
+			title TEXT,
+			data TEXT,
+			diff TEXT,
+			author_id TEXT,
+			note TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE,
+			FOREIGN KEY (author_id) REFERENCES users(id)
+		)`,
+
+		// Block templates table
+		`CREATE TABLE IF NOT EXISTS block_templates (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			description TEXT,
+			block_type TEXT NOT NULL,
+			schema TEXT,
+			default_data TEXT,
+			thumbnail TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+
 		// Create indexes
 		`CREATE INDEX IF NOT EXISTS idx_properties_slug ON properties(slug)`,
 		`CREATE INDEX IF NOT EXISTS idx_properties_owner ON properties(owner_id)`,
@@ -246,6 +305,10 @@ func runMigrations(db *gorm.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_content_versions_entity ON content_versions(entity_type, entity_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_page_views_property ON page_views(property_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_page_views_session ON page_views(session_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_pages_slug ON pages(slug)`,
+		`CREATE INDEX IF NOT EXISTS idx_pages_status ON pages(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_page_blocks_page ON page_blocks(page_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_page_versions_page ON page_versions(page_id)`,
 	}
 
 	for _, migration := range migrations {
