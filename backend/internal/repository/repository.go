@@ -5,11 +5,13 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/analytics"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/content"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/media"
+	"github.com/timlinux/PropertyForSale/backend/internal/domain/notification"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/page"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/property"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/user"
@@ -18,29 +20,31 @@ import (
 
 // Repositories holds all repository implementations
 type Repositories struct {
-	Property  PropertyRepository
-	Dwelling  DwellingRepository
-	Room      RoomRepository
-	Area      AreaRepository
-	Media     MediaRepository
-	User      UserRepository
-	Analytics AnalyticsRepository
-	Content   ContentRepository
-	Page      PageRepository
+	Property     PropertyRepository
+	Dwelling     DwellingRepository
+	Room         RoomRepository
+	Area         AreaRepository
+	Media        MediaRepository
+	User         UserRepository
+	Analytics    AnalyticsRepository
+	Content      ContentRepository
+	Page         PageRepository
+	Notification NotificationRepository
 }
 
 // NewRepositories creates a new Repositories instance with all implementations
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		Property:  NewPropertyRepository(db),
-		Dwelling:  NewDwellingRepository(db),
-		Room:      NewRoomRepository(db),
-		Area:      NewAreaRepository(db),
-		Media:     NewMediaRepository(db),
-		User:      NewUserRepository(db),
-		Analytics: NewAnalyticsRepository(db),
-		Content:   NewContentRepository(db),
-		Page:      NewPageRepository(db),
+		Property:     NewPropertyRepository(db),
+		Dwelling:     NewDwellingRepository(db),
+		Room:         NewRoomRepository(db),
+		Area:         NewAreaRepository(db),
+		Media:        NewMediaRepository(db),
+		User:         NewUserRepository(db),
+		Analytics:    NewAnalyticsRepository(db),
+		Content:      NewContentRepository(db),
+		Page:         NewPageRepository(db),
+		Notification: NewNotificationRepository(db),
 	}
 }
 
@@ -243,4 +247,38 @@ type VisitorLocation struct {
 type DwellTimeStats struct {
 	AvgDwellTimeMs int64            `json:"avg_dwell_time_ms"`
 	ByPage         map[string]int64 `json:"by_page"`
+}
+
+// NotificationRepository defines notification data access operations
+type NotificationRepository interface {
+	// Notifications
+	CreateNotification(ctx context.Context, n *notification.Notification) error
+	GetNotification(ctx context.Context, id uuid.UUID) (*notification.Notification, error)
+	ListNotifications(ctx context.Context, opts NotificationListOptions) ([]notification.Notification, int64, error)
+	MarkAsRead(ctx context.Context, id uuid.UUID) error
+	MarkAllAsRead(ctx context.Context, userID uuid.UUID) error
+	GetUnreadCount(ctx context.Context, userID uuid.UUID) (int64, error)
+	DeleteNotification(ctx context.Context, id uuid.UUID) error
+	DeleteOldNotifications(ctx context.Context, olderThan time.Time) (int64, error)
+
+	// Preferences
+	GetPreferences(ctx context.Context, userID uuid.UUID) (*notification.NotificationPreference, error)
+	CreateOrUpdatePreferences(ctx context.Context, pref *notification.NotificationPreference) error
+
+	// Expression of Interest
+	CreateEOI(ctx context.Context, eoi *notification.ExpressionOfInterest) error
+	GetEOI(ctx context.Context, id uuid.UUID) (*notification.ExpressionOfInterest, error)
+	ListEOIs(ctx context.Context, propertyID uuid.UUID, status string) ([]notification.ExpressionOfInterest, error)
+	UpdateEOIStatus(ctx context.Context, id uuid.UUID, status string) error
+	GetEOIsByProperty(ctx context.Context, propertyID uuid.UUID) ([]notification.ExpressionOfInterest, error)
+
+	// Email templates
+	GetEmailTemplate(ctx context.Context, name string) (*notification.EmailTemplate, error)
+	ListEmailTemplates(ctx context.Context) ([]notification.EmailTemplate, error)
+	CreateOrUpdateEmailTemplate(ctx context.Context, template *notification.EmailTemplate) error
+
+	// Email logs
+	CreateEmailLog(ctx context.Context, log *notification.EmailLog) error
+	UpdateEmailLogStatus(ctx context.Context, id uuid.UUID, status string, errMsg string) error
+	GetPendingEmails(ctx context.Context, limit int) ([]notification.EmailLog, error)
 }

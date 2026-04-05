@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/page"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
+	"github.com/timlinux/PropertyForSale/backend/pkg/types"
 )
 
 // PageHandler handles CMS page requests
@@ -270,8 +271,8 @@ func (h *PageHandler) CreateBlock(c *gin.Context) {
 		PageID:    pageID,
 		BlockType: req.BlockType,
 		Position:  req.Position,
-		Data:      page.JSONB(req.Data),
-		Settings:  page.JSONB(req.Settings),
+		Data:      types.JSONB(req.Data),
+		Settings:  types.JSONB(req.Settings),
 	}
 
 	if err := h.repo.CreateBlock(c.Request.Context(), block); err != nil {
@@ -317,10 +318,10 @@ func (h *PageHandler) UpdateBlock(c *gin.Context) {
 		block.Position = *req.Position
 	}
 	if req.Data != nil {
-		block.Data = page.JSONB(*req.Data)
+		block.Data = types.JSONB(*req.Data)
 	}
 	if req.Settings != nil {
-		block.Settings = page.JSONB(*req.Settings)
+		block.Settings = types.JSONB(*req.Settings)
 	}
 
 	if err := h.repo.UpdateBlock(c.Request.Context(), block); err != nil {
@@ -505,8 +506,8 @@ func (h *PageHandler) CreateBlockTemplate(c *gin.Context) {
 		Name:        req.Name,
 		Description: req.Description,
 		BlockType:   req.BlockType,
-		Schema:      page.JSONB(req.Schema),
-		DefaultData: page.JSONB(req.DefaultData),
+		Schema:      types.JSONB(req.Schema),
+		DefaultData: types.JSONB(req.DefaultData),
 		Thumbnail:   req.Thumbnail,
 	}
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/timlinux/PropertyForSale/backend/pkg/types"
 )
 
 // MediaType represents the type of media file
@@ -45,15 +46,12 @@ type Media struct {
 	Width        int        `json:"width,omitempty"`
 	Height       int        `json:"height,omitempty"`
 	Duration     float64    `json:"duration,omitempty"` // For video/audio in seconds
-	Autoplay     bool       `json:"autoplay" gorm:"default:false"`
-	Metadata     JSONB      `json:"metadata" gorm:"type:jsonb;default:'{}'"`
-	SortOrder    int        `json:"sort_order" gorm:"default:0"`
+	Autoplay     bool        `json:"autoplay" gorm:"default:false"`
+	Metadata     types.JSONB `json:"metadata" gorm:"type:text;default:'{}'"`
+	SortOrder    int         `json:"sort_order" gorm:"default:0"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
-
-// JSONB represents a JSONB column type
-type JSONB map[string]interface{}
 
 // TableName returns the table name for GORM
 func (Media) TableName() string {

@@ -15,6 +15,7 @@ import (
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/content"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/property"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
+	"github.com/timlinux/PropertyForSale/backend/pkg/types"
 )
 
 // PropertyService handles property business logic
@@ -61,6 +62,7 @@ func (s *PropertyService) Create(ctx context.Context, input CreatePropertyInput)
 	}
 
 	p := &property.Property{
+		ID:           uuid.New(), // Generate UUID for SQLite compatibility
 		OwnerID:      input.OwnerID,
 		Name:         input.Name,
 		Slug:         slug,
@@ -214,7 +216,7 @@ func (s *PropertyService) createVersion(ctx context.Context, p *property.Propert
 		return err
 	}
 
-	var jsonData content.JSONB
+	var jsonData types.JSONB
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		return err
 	}

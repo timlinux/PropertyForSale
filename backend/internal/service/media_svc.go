@@ -16,6 +16,7 @@ import (
 	"github.com/timlinux/PropertyForSale/backend/internal/config"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/media"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
+	"github.com/timlinux/PropertyForSale/backend/pkg/types"
 )
 
 // MediaService handles media business logic
@@ -135,7 +136,7 @@ func (s *MediaService) Update(ctx context.Context, id uuid.UUID, input UpdateMed
 		m.SortOrder = *input.SortOrder
 	}
 	if input.Metadata != nil {
-		m.Metadata = media.JSONB(input.Metadata)
+		m.Metadata = types.JSONB(input.Metadata)
 	}
 
 	m.UpdatedAt = time.Now()

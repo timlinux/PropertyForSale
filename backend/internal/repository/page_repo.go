@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/page"
+	"github.com/timlinux/PropertyForSale/backend/pkg/types"
 	"gorm.io/gorm"
 )
 
@@ -252,7 +253,7 @@ func (r *pageRepository) SavePageSnapshot(ctx context.Context, pageID uuid.UUID,
 		PageID:        pageID,
 		VersionNumber: latestVersion + 1,
 		Title:         p.Title,
-		Data:          page.JSONB(dataMap),
+		Data:          types.JSONB(dataMap),
 		AuthorID:      authorID,
 		Note:          note,
 	}

@@ -41,6 +41,7 @@ type CreateDwellingInput struct {
 // Create creates a new dwelling
 func (s *DwellingService) Create(ctx context.Context, input CreateDwellingInput) (*property.Dwelling, error) {
 	d := &property.Dwelling{
+		ID:          uuid.New(), // Generate UUID for SQLite compatibility
 		PropertyID:  input.PropertyID,
 		Name:        input.Name,
 		Type:        input.Type,

@@ -7,10 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/timlinux/PropertyForSale/backend/pkg/types"
 )
-
-// JSONB is a map type for JSON/JSONB database columns
-type JSONB map[string]interface{}
 
 // PageStatus represents the publication status of a page
 type PageStatus string
@@ -84,8 +82,8 @@ type PageBlock struct {
 	PageID    uuid.UUID `gorm:"type:uuid;not null;index" json:"page_id"`
 	BlockType BlockType `gorm:"not null" json:"block_type"`
 	Position  int       `gorm:"not null" json:"position"`
-	Data      JSONB     `gorm:"type:jsonb" json:"data"`
-	Settings  JSONB     `gorm:"type:jsonb" json:"settings"`
+	Data      types.JSONB `gorm:"type:text" json:"data"`
+	Settings  types.JSONB `gorm:"type:text" json:"settings"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -101,8 +99,8 @@ type BlockTemplate struct {
 	Name        string    `gorm:"not null" json:"name"`
 	Description string    `json:"description"`
 	BlockType   BlockType `gorm:"not null" json:"block_type"`
-	Schema      JSONB     `gorm:"type:jsonb" json:"schema"`
-	DefaultData JSONB     `gorm:"type:jsonb" json:"default_data"`
+	Schema      types.JSONB `gorm:"type:text" json:"schema"`
+	DefaultData types.JSONB `gorm:"type:text" json:"default_data"`
 	Thumbnail   string    `json:"thumbnail"`
 	CreatedAt   time.Time `json:"created_at"`
 }
@@ -118,8 +116,8 @@ type PageVersion struct {
 	PageID        uuid.UUID `gorm:"type:uuid;not null;index" json:"page_id"`
 	VersionNumber int       `gorm:"not null" json:"version_number"`
 	Title         string    `json:"title"`
-	Data          JSONB     `gorm:"type:jsonb" json:"data"` // Full page snapshot
-	Diff          JSONB     `gorm:"type:jsonb" json:"diff"` // Changes from previous
+	Data          types.JSONB `gorm:"type:text" json:"data"` // Full page snapshot
+	Diff          types.JSONB `gorm:"type:text" json:"diff"` // Changes from previous
 	AuthorID      uuid.UUID `gorm:"type:uuid" json:"author_id"`
 	Note          string    `json:"note"`
 	CreatedAt     time.Time `json:"created_at"`

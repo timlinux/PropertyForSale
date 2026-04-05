@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/timlinux/PropertyForSale/backend/pkg/types"
 )
 
 // PageView represents a single page view event
@@ -52,8 +53,8 @@ type ABTest struct {
 	Description     string       `json:"description"`
 	EntityType      string       `json:"entity_type" gorm:"not null"`
 	EntityID        uuid.UUID    `json:"entity_id" gorm:"type:uuid;not null"`
-	Variants        JSONB        `json:"variants" gorm:"type:jsonb;default:'[]'"`
-	TrafficSplit    JSONB        `json:"traffic_split" gorm:"type:jsonb;default:'{}'"`
+	Variants        types.JSONB  `json:"variants" gorm:"type:text;default:'[]'"`
+	TrafficSplit    types.JSONB  `json:"traffic_split" gorm:"type:text;default:'{}'"`
 	StartDate       *time.Time   `json:"start_date"`
 	EndDate         *time.Time   `json:"end_date"`
 	Status          ABTestStatus `json:"status" gorm:"default:'draft'"`
@@ -62,9 +63,6 @@ type ABTest struct {
 	CreatedAt       time.Time    `json:"created_at"`
 	UpdatedAt       time.Time    `json:"updated_at"`
 }
-
-// JSONB represents a JSONB column type
-type JSONB map[string]interface{}
 
 // TableName returns the table name for GORM
 func (ABTest) TableName() string {
@@ -76,7 +74,7 @@ type ABVariant struct {
 	ID        uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	ABTestID  uuid.UUID `json:"ab_test_id" gorm:"type:uuid;not null;index"`
 	Name      string    `json:"name" gorm:"not null"`
-	Content   JSONB     `json:"content" gorm:"type:jsonb;default:'{}'"`
+	Content   types.JSONB `json:"content" gorm:"type:text;default:'{}'"`
 	Weight    int       `json:"weight" gorm:"default:50"` // Percentage weight
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

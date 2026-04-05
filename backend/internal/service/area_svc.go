@@ -39,6 +39,7 @@ type CreateAreaInput struct {
 // Create creates a new area
 func (s *AreaService) Create(ctx context.Context, input CreateAreaInput) (*property.Area, error) {
 	a := &property.Area{
+		ID:          uuid.New(), // Generate UUID for SQLite compatibility
 		PropertyID:  input.PropertyID,
 		Name:        input.Name,
 		Type:        input.Type,

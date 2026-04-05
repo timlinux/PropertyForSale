@@ -40,6 +40,7 @@ type CreateRoomInput struct {
 // Create creates a new room
 func (s *RoomService) Create(ctx context.Context, input CreateRoomInput) (*property.Room, error) {
 	r := &property.Room{
+		ID:          uuid.New(), // Generate UUID for SQLite compatibility
 		DwellingID:  input.DwellingID,
 		Name:        input.Name,
 		Type:        input.Type,

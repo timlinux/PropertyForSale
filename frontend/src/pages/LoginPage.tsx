@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Tim Sutton <tim@kartoza.com>
 // SPDX-License-Identifier: EUPL-1.2
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Alert,
@@ -16,10 +16,12 @@ import {
   VStack,
   useToast,
 } from '@chakra-ui/react'
-import { FiGithub } from 'react-icons/fi'
+import { FiGithub, FiUser } from 'react-icons/fi'
 import { FaGoogle, FaApple, FaMicrosoft, FaFacebook } from 'react-icons/fa'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../context/authStore'
+
+const isDev = import.meta.env.DEV
 
 interface ProviderConfig {
   name: string
@@ -87,6 +89,9 @@ export default function LoginPage() {
   const [searchParams] = useSearchParams()
   const toast = useToast()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const setTokens = useAuthStore((state) => state.setTokens)
+  const setUser = useAuthStore((state) => state.setUser)
+  const [isDevLoading, setIsDevLoading] = useState(false)
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -120,6 +125,55 @@ export default function LoginPage() {
     window.location.href = `/api/v1/auth/${provider}`
   }
 
+  const handleDevLogin = async () => {
+    setIsDevLoading(true)
+    try {
+      const response = await fetch('/api/v1/auth/dev-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'admin@example.com',
+          name: 'Admin User',
+          role: 'admin',
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Dev login failed')
+      }
+
+      const data = await response.json()
+
+      // Set tokens
+      setTokens({
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresAt: new Date(data.expires_at),
+      })
+
+      // Set user
+      setUser(data.user)
+
+      toast({
+        title: 'Logged in',
+        description: `Welcome, ${data.user.name}!`,
+        status: 'success',
+        duration: 3000,
+      })
+
+      navigate('/dashboard')
+    } catch (error) {
+      toast({
+        title: 'Login failed',
+        description: 'Dev login failed. Make sure the server is in development mode.',
+        status: 'error',
+        duration: 5000,
+      })
+    } finally {
+      setIsDevLoading(false)
+    }
+  }
+
   const error = searchParams.get('error')
 
   return (
@@ -139,14 +193,32 @@ export default function LoginPage() {
 
         <Box w="full" bg="white" p={8} borderRadius="lg" boxShadow="lg">
           <VStack spacing={4}>
+            {/* Dev Login Button - only in development */}
+            {isDev && (
+              <>
+                <Button
+                  w="full"
+                  size="lg"
+                  leftIcon={<FiUser />}
+                  onClick={handleDevLogin}
+                  isLoading={isDevLoading}
+                  colorScheme="purple"
+                  variant="solid"
+                >
+                  Dev Login (Admin)
+                </Button>
+                <Divider />
+              </>
+            )}
+
             {isLoading ? (
               <Text color="gray.500">Loading providers...</Text>
-            ) : providers.length === 0 ? (
+            ) : providers.length === 0 && !isDev ? (
               <Text color="gray.500">
                 No authentication providers configured.
                 Please contact the administrator.
               </Text>
-            ) : (
+            ) : providers.length > 0 && (
               providers.map((provider) => {
                 const config = providerConfigs[provider]
                 if (!config) return null

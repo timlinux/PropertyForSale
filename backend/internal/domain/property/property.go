@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/timlinux/PropertyForSale/backend/pkg/types"
 )
 
 // Status represents the property publication status
@@ -36,9 +37,9 @@ type Property struct {
 	Country      string     `json:"country"`
 	Latitude     float64    `json:"latitude"`
 	Longitude    float64    `json:"longitude"`
-	Status       Status     `json:"status" gorm:"default:'draft'"`
-	Metadata     JSONB      `json:"metadata" gorm:"type:jsonb;default:'{}'"`
-	CreatedAt    time.Time  `json:"created_at"`
+	Status       Status      `json:"status" gorm:"default:'draft'"`
+	Metadata     types.JSONB `json:"metadata" gorm:"type:text;default:'{}'"`
+	CreatedAt    time.Time   `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	PublishedAt  *time.Time `json:"published_at"`
 
@@ -46,9 +47,6 @@ type Property struct {
 	Dwellings []Dwelling `json:"dwellings,omitempty" gorm:"foreignKey:PropertyID"`
 	Areas     []Area     `json:"areas,omitempty" gorm:"foreignKey:PropertyID"`
 }
-
-// JSONB represents a JSONB column type
-type JSONB map[string]interface{}
 
 // TableName returns the table name for GORM
 func (Property) TableName() string {

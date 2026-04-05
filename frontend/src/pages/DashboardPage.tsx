@@ -36,10 +36,36 @@ import {
   PageViewsChart,
   VisitorMap,
 } from '../components/analytics'
+import PropertyForm from '../components/property/PropertyForm'
+import PropertyEdit from '../components/property/PropertyEdit'
 
 // Dashboard overview
 function DashboardOverview() {
   const user = useAuthStore((state) => state.user)
+
+  // Fetch properties for count and recent list
+  const { data: propertiesData, isLoading: propertiesLoading } = useQuery({
+    queryKey: ['my-properties'],
+    queryFn: () => api.getProperties(),
+  })
+
+  // Fetch analytics dashboard data (last 30 days)
+  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['dashboard-analytics'],
+    queryFn: () => {
+      const end = new Date()
+      const start = new Date()
+      start.setDate(start.getDate() - 30)
+      return api.getDashboard({
+        start_date: start.toISOString().split('T')[0],
+        end_date: end.toISOString().split('T')[0],
+      })
+    },
+  })
+
+  const properties = propertiesData?.data || []
+  const recentProperties = properties.slice(0, 5)
+  const isLoading = propertiesLoading || analyticsLoading
 
   return (
     <VStack spacing={8} align="stretch">
@@ -60,54 +86,102 @@ function DashboardOverview() {
       </HStack>
 
       {/* Stats */}
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
-        <StatCard
-          label="Total Properties"
-          value="0"
-          icon={FiHome}
-          color="blue"
-        />
-        <StatCard
-          label="Total Views"
-          value="0"
-          icon={FiBarChart2}
-          color="green"
-        />
-        <StatCard
-          label="Unique Visitors"
-          value="0"
-          icon={FiUsers}
-          color="purple"
-        />
-        <StatCard
-          label="Inquiries"
-          value="0"
-          icon={FiBarChart2}
-          color="orange"
-        />
-      </SimpleGrid>
+      {isLoading ? (
+        <Center py={8}>
+          <Spinner />
+        </Center>
+      ) : (
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
+          <StatCard
+            label="Total Properties"
+            value={String(propertiesData?.total || properties.length)}
+            icon={FiHome}
+            color="blue"
+          />
+          <StatCard
+            label="Total Views"
+            value={String(analyticsData?.total_views || 0)}
+            icon={FiBarChart2}
+            color="green"
+          />
+          <StatCard
+            label="Unique Sessions"
+            value={String(analyticsData?.unique_sessions || 0)}
+            icon={FiUsers}
+            color="purple"
+          />
+          <StatCard
+            label="Pages Tracked"
+            value={String(Object.keys(analyticsData?.page_view_counts || {}).length)}
+            icon={FiEye}
+            color="orange"
+          />
+        </SimpleGrid>
+      )}
 
       {/* Recent activity */}
       <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
         <GridItem>
           <Card>
             <CardHeader>
-              <Heading size="md">Recent Properties</Heading>
+              <HStack justify="space-between">
+                <Heading size="md">Recent Properties</Heading>
+                {recentProperties.length > 0 && (
+                  <Button as={RouterLink} to="/dashboard/properties" size="sm" variant="ghost">
+                    View All
+                  </Button>
+                )}
+              </HStack>
             </CardHeader>
             <CardBody>
-              <VStack align="stretch" spacing={4}>
-                <Text color="gray.500" textAlign="center" py={8}>
-                  No properties yet. Create your first property to get started.
-                </Text>
-                <Button
-                  as={RouterLink}
-                  to="/dashboard/properties/new"
-                  variant="outline"
-                  leftIcon={<FiPlus />}
-                >
-                  Create Property
-                </Button>
-              </VStack>
+              {recentProperties.length === 0 ? (
+                <VStack align="stretch" spacing={4}>
+                  <Text color="gray.500" textAlign="center" py={8}>
+                    No properties yet. Create your first property to get started.
+                  </Text>
+                  <Button
+                    as={RouterLink}
+                    to="/dashboard/properties/new"
+                    variant="outline"
+                    leftIcon={<FiPlus />}
+                  >
+                    Create Property
+                  </Button>
+                </VStack>
+              ) : (
+                <VStack align="stretch" spacing={3}>
+                  {recentProperties.map((property) => (
+                    <HStack
+                      key={property.id}
+                      p={3}
+                      borderRadius="md"
+                      bg="gray.50"
+                      _hover={{ bg: 'gray.100' }}
+                      justify="space-between"
+                    >
+                      <VStack align="flex-start" spacing={0}>
+                        <Text fontWeight="600">{property.name}</Text>
+                        <Text fontSize="sm" color="gray.500">
+                          {property.city ? `${property.city}${property.country ? `, ${property.country}` : ''}` : 'No location'}
+                        </Text>
+                      </VStack>
+                      <HStack>
+                        <Badge colorScheme={property.status === 'published' ? 'green' : 'gray'}>
+                          {property.status}
+                        </Badge>
+                        <Button
+                          as={RouterLink}
+                          to={`/dashboard/properties/${property.slug}/edit`}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          Edit
+                        </Button>
+                      </HStack>
+                    </HStack>
+                  ))}
+                </VStack>
+              )}
             </CardBody>
           </Card>
         </GridItem>
@@ -187,23 +261,96 @@ function ProfilePage() {
   )
 }
 
-// Placeholder pages
+// Properties list page with real data
 function PropertiesPage() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['my-properties'],
+    queryFn: () => api.getProperties(),
+  })
+
+  const properties = data?.data || []
+
   return (
     <VStack spacing={6} align="stretch">
       <HStack justify="space-between">
         <Heading size="lg">My Properties</Heading>
-        <Button leftIcon={<FiPlus />} colorScheme="blue">
+        <Button as={RouterLink} to="/dashboard/properties/new" leftIcon={<FiPlus />} colorScheme="blue">
           Add Property
         </Button>
       </HStack>
-      <Card>
-        <CardBody>
-          <Text color="gray.500" textAlign="center" py={8}>
-            No properties found. Create your first property to get started.
-          </Text>
-        </CardBody>
-      </Card>
+
+      {isLoading ? (
+        <Center py={8}>
+          <Spinner />
+        </Center>
+      ) : error ? (
+        <Card>
+          <CardBody>
+            <Text color="red.500" textAlign="center">
+              Error loading properties. Please try again.
+            </Text>
+          </CardBody>
+        </Card>
+      ) : properties.length === 0 ? (
+        <Card>
+          <CardBody>
+            <Text color="gray.500" textAlign="center" py={8}>
+              No properties found. Create your first property to get started.
+            </Text>
+          </CardBody>
+        </Card>
+      ) : (
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+          {properties.map((property) => (
+            <Card key={property.id} _hover={{ shadow: 'lg' }} transition="shadow 0.2s">
+              <CardBody>
+                <VStack align="stretch" spacing={3}>
+                  <HStack justify="space-between">
+                    <Heading size="sm" noOfLines={1}>{property.name}</Heading>
+                    <Badge colorScheme={property.status === 'published' ? 'green' : 'gray'}>
+                      {property.status}
+                    </Badge>
+                  </HStack>
+                  <Text fontSize="sm" color="gray.600" noOfLines={2}>
+                    {property.description || 'No description'}
+                  </Text>
+                  {property.city && (
+                    <Text fontSize="sm" color="gray.500">
+                      {property.city}{property.country ? `, ${property.country}` : ''}
+                    </Text>
+                  )}
+                  {(property.price_min > 0 || property.price_max > 0) && (
+                    <Text fontWeight="600" color="blue.600">
+                      {property.currency} {property.price_min.toLocaleString()}
+                      {property.price_max > property.price_min && ` - ${property.price_max.toLocaleString()}`}
+                    </Text>
+                  )}
+                  <HStack pt={2}>
+                    <Button
+                      as={RouterLink}
+                      to={`/dashboard/properties/${property.slug}/edit`}
+                      size="sm"
+                      colorScheme="blue"
+                      flex={1}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      as={RouterLink}
+                      to={`/property/${property.slug}`}
+                      size="sm"
+                      variant="outline"
+                      flex={1}
+                    >
+                      View
+                    </Button>
+                  </HStack>
+                </VStack>
+              </CardBody>
+            </Card>
+          ))}
+        </SimpleGrid>
+      )}
     </VStack>
   )
 }
@@ -376,6 +523,8 @@ export default function DashboardPage() {
       <Routes>
         <Route index element={<DashboardOverview />} />
         <Route path="properties" element={<PropertiesPage />} />
+        <Route path="properties/new" element={<PropertyForm />} />
+        <Route path="properties/:slug/edit" element={<PropertyEdit />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Routes>

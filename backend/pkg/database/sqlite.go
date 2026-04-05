@@ -35,7 +35,8 @@ func Init(cfg *Config) (*gorm.DB, error) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return nil, fmt.Errorf("failed to create database directory: %w", err)
 		}
-		dsn = cfg.Path
+		// Use file: URI format with mode=rwc for read/write/create
+		dsn = fmt.Sprintf("file:%s?mode=rwc&_journal_mode=WAL", cfg.Path)
 		log.Info().Str("path", cfg.Path).Msg("Using file-based SQLite database")
 	}
 
@@ -113,6 +114,7 @@ func runMigrations(db *gorm.DB) error {
 			latitude REAL,
 			longitude REAL,
 			status TEXT DEFAULT 'draft',
+			metadata TEXT DEFAULT '{}',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			published_at DATETIME,
@@ -211,12 +213,14 @@ func runMigrations(db *gorm.DB) error {
 			scroll_depth INTEGER,
 			ip_address TEXT,
 			country TEXT,
+			region TEXT,
 			city TEXT,
 			latitude REAL,
 			longitude REAL,
 			referrer TEXT,
 			user_agent TEXT,
-			ab_variant TEXT,
+			device_type TEXT,
+			ab_variant_id TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 
@@ -294,6 +298,77 @@ func runMigrations(db *gorm.DB) error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 
+		// Notifications table
+		`CREATE TABLE IF NOT EXISTS notifications (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			type TEXT NOT NULL,
+			title TEXT NOT NULL,
+			message TEXT,
+			data TEXT,
+			status TEXT DEFAULT 'unread',
+			action_url TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			read_at DATETIME,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+
+		// Notification preferences table
+		`CREATE TABLE IF NOT EXISTS notification_preferences (
+			id TEXT PRIMARY KEY,
+			user_id TEXT UNIQUE NOT NULL,
+			email_enabled INTEGER DEFAULT 1,
+			push_enabled INTEGER DEFAULT 1,
+			digest_enabled INTEGER DEFAULT 1,
+			digest_frequency TEXT DEFAULT 'daily',
+			type_preferences TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+
+		// Expression of interest table
+		`CREATE TABLE IF NOT EXISTS expressions_of_interest (
+			id TEXT PRIMARY KEY,
+			property_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			email TEXT NOT NULL,
+			phone TEXT,
+			message TEXT,
+			status TEXT DEFAULT 'new',
+			notified_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+		)`,
+
+		// Email templates table
+		`CREATE TABLE IF NOT EXISTS email_templates (
+			id TEXT PRIMARY KEY,
+			name TEXT UNIQUE NOT NULL,
+			subject TEXT NOT NULL,
+			html_body TEXT NOT NULL,
+			text_body TEXT,
+			variables TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+
+		// Email logs table
+		`CREATE TABLE IF NOT EXISTS email_logs (
+			id TEXT PRIMARY KEY,
+			template_id TEXT,
+			template_name TEXT,
+			recipient_id TEXT,
+			to_email TEXT NOT NULL,
+			subject TEXT NOT NULL,
+			status TEXT DEFAULT 'pending',
+			error TEXT,
+			sent_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (recipient_id) REFERENCES users(id)
+		)`,
+
 		// Create indexes
 		`CREATE INDEX IF NOT EXISTS idx_properties_slug ON properties(slug)`,
 		`CREATE INDEX IF NOT EXISTS idx_properties_owner ON properties(owner_id)`,
@@ -309,6 +384,10 @@ func runMigrations(db *gorm.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_pages_status ON pages(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_page_blocks_page ON page_blocks(page_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_page_versions_page ON page_versions(page_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_eoi_property ON expressions_of_interest(property_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_email_logs_status ON email_logs(status)`,
 	}
 
 	for _, migration := range migrations {
