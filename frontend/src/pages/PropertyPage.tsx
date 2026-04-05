@@ -43,6 +43,7 @@ import { api, type Dwelling, type Area } from '../api'
 import PropertyMap from '../components/map/PropertyMap'
 import { MediaGallery, AmbientAudioPlayer } from '../components/media'
 import { usePageTracking } from '../hooks/usePageTracking'
+import { SEOHead } from '../components/common/SEOHead'
 
 export default function PropertyPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -157,8 +158,46 @@ export default function PropertyPage() {
     )
   }
 
+  // Build SEO metadata
+  const seoDescription = property.description
+    ? property.description.slice(0, 157) + (property.description.length > 157 ? '...' : '')
+    : `Beautiful property in ${property.city}, ${property.country}. View details, photos, and schedule a tour.`
+
+  const structuredData = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: property.name,
+    description: seoDescription,
+    url: window.location.href,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: property.address_line1,
+      addressLocality: property.city,
+      addressRegion: property.state,
+      postalCode: property.postal_code,
+      addressCountry: property.country,
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: property.latitude,
+      longitude: property.longitude,
+    },
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: property.currency || 'EUR',
+      price: property.price_min,
+    },
+  })
+
   return (
     <Box bg={bgColor} minH="100vh">
+      <SEOHead
+        title={`${property.name}${property.city ? ` in ${property.city}` : ''}`}
+        description={seoDescription}
+        url={window.location.href}
+        type="website"
+        structuredData={structuredData}
+      />
       {/* Ambient Audio Player */}
       {audioTracks.length > 0 && (
         <AmbientAudioPlayer audioTracks={audioTracks} autoplay />

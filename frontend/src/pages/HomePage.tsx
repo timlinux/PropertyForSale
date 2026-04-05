@@ -15,10 +15,15 @@ import {
   Flex,
 } from '@chakra-ui/react'
 import { FiMap, FiHome, FiBarChart2, FiPlay, FiArrowRight } from 'react-icons/fi'
+import { SEOHead } from '../components/common/SEOHead'
 
 export default function HomePage() {
   return (
     <Box>
+      <SEOHead
+        title="Premium Real Estate"
+        description="Discover your dream home with immersive 3D experiences and interactive maps. Premium properties beautifully presented."
+      />
       {/* Hero Section - Apple style: massive whitespace, centered content */}
       <Box
         minH={{ base: '80vh', md: '90vh' }}

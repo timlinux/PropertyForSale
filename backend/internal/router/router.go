@@ -47,7 +47,7 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 
 	// Initialize handlers
 	isDev := cfg.Env == "development"
-	handlers := handler.NewHandlers(services, isDev)
+	handlers := handler.NewHandlers(services, repos, cfg, isDev)
 
 	// Create Gin engine
 	r := gin.New()
@@ -182,7 +182,36 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 			versions.GET("/:entity_type/:entity_id/:version", handlers.Version.Get)
 			versions.POST("/:entity_type/:entity_id/rollback/:version", handlers.Version.Rollback)
 		}
+
+		// A/B Testing routes (public - variant assignment)
+		abTests := v1.Group("/ab-tests")
+		{
+			abTests.POST("/:id/assign", handlers.ABTest.AssignVariant)
+		}
+
+		// A/B Testing routes (authenticated - management)
+		abTestsAuth := v1.Group("/ab-tests")
+		abTestsAuth.Use(middleware.RequireAuth(cfg), middleware.RequireRole("admin"))
+		{
+			abTestsAuth.GET("", handlers.ABTest.ListABTests)
+			abTestsAuth.POST("", handlers.ABTest.CreateABTest)
+			abTestsAuth.GET("/:id", handlers.ABTest.GetABTest)
+			abTestsAuth.PUT("/:id", handlers.ABTest.UpdateABTest)
+			abTestsAuth.DELETE("/:id", handlers.ABTest.DeleteABTest)
+			abTestsAuth.POST("/:id/variants", handlers.ABTest.CreateVariant)
+			abTestsAuth.GET("/:id/results", handlers.ABTest.GetResults)
+		}
+
+		// SEO routes
+		seo := v1.Group("/seo")
+		{
+			seo.GET("/property/:slug", handlers.SEO.GetPropertyMeta)
+		}
 	}
+
+	// Root-level SEO routes (sitemap.xml, robots.txt)
+	r.GET("/sitemap.xml", handlers.SEO.Sitemap)
+	r.GET("/robots.txt", handlers.SEO.RobotsTxt)
 
 	// Cleanup function
 	cleanup := func() {

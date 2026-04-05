@@ -120,6 +120,45 @@ export interface VisitorLocation {
   count: number
 }
 
+// A/B Testing types
+export interface ABTest {
+  id: string
+  name: string
+  description: string
+  entity_type: string
+  entity_id: string
+  status: 'draft' | 'running' | 'completed' | 'cancelled'
+  start_date: string | null
+  end_date: string | null
+  winner_variant_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ABVariant {
+  id: string
+  ab_test_id: string
+  name: string
+  content: Record<string, unknown>
+  weight: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ABTestResults {
+  test_id: string
+  total_views: number
+  variant_stats: ABVariantStats[]
+}
+
+export interface ABVariantStats {
+  variant_id: string
+  variant_name: string
+  views: number
+  avg_dwell_time_ms: number
+  avg_scroll_depth: number
+}
+
 // Get auth headers from store
 function getAuthHeaders(): Record<string, string> {
   const tokens = useAuthStore.getState().tokens
@@ -369,4 +408,65 @@ export const api = {
       requireAuth: true,
     })
   },
+
+  // A/B Testing
+  listABTests: (params?: { status?: string; entity_type?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.entity_type) searchParams.set('entity_type', params.entity_type)
+    const query = searchParams.toString()
+    return fetchAPI<{ data: ABTest[]; total: number }>(`/ab-tests${query ? `?${query}` : ''}`, {
+      requireAuth: true,
+    })
+  },
+
+  createABTest: (data: {
+    name: string
+    description?: string
+    entity_type: string
+    entity_id: string
+    start_date?: string
+    end_date?: string
+  }) =>
+    fetchAPI<ABTest>('/ab-tests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  getABTest: (id: string) =>
+    fetchAPI<{ test: ABTest; variants: ABVariant[] }>(`/ab-tests/${id}`, {
+      requireAuth: true,
+    }),
+
+  updateABTest: (id: string, data: Partial<ABTest>) =>
+    fetchAPI<ABTest>(`/ab-tests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  deleteABTest: (id: string) =>
+    fetchAPI<void>(`/ab-tests/${id}`, {
+      method: 'DELETE',
+      requireAuth: true,
+    }),
+
+  createABVariant: (testId: string, data: { name: string; content?: Record<string, unknown>; weight?: number }) =>
+    fetchAPI<ABVariant>(`/ab-tests/${testId}/variants`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  getABTestResults: (testId: string) =>
+    fetchAPI<ABTestResults>(`/ab-tests/${testId}/results`, {
+      requireAuth: true,
+    }),
+
+  assignABVariant: (testId: string, sessionId: string) =>
+    fetchAPI<{ variant_id: string; variant: ABVariant }>(`/ab-tests/${testId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    }),
 }

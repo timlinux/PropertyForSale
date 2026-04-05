@@ -114,6 +114,43 @@ type AnalyticsRepository interface {
 	GetABTest(ctx context.Context, id uuid.UUID) (*analytics.ABTest, error)
 	UpdateABTest(ctx context.Context, test *analytics.ABTest) error
 	GetActiveTestForEntity(ctx context.Context, entityType string, entityID uuid.UUID) (*analytics.ABTest, error)
+	ListABTests(ctx context.Context, opts ABTestListOptions) ([]analytics.ABTest, int64, error)
+	DeleteABTest(ctx context.Context, id uuid.UUID) error
+
+	// A/B Variants
+	CreateABVariant(ctx context.Context, variant *analytics.ABVariant) error
+	GetABVariant(ctx context.Context, id uuid.UUID) (*analytics.ABVariant, error)
+	ListABVariants(ctx context.Context, testID uuid.UUID) ([]analytics.ABVariant, error)
+	UpdateABVariant(ctx context.Context, variant *analytics.ABVariant) error
+	DeleteABVariant(ctx context.Context, id uuid.UUID) error
+
+	// A/B Test Results
+	GetABTestResults(ctx context.Context, testID uuid.UUID) (*ABTestResults, error)
+}
+
+// ABTestListOptions contains A/B test listing parameters
+type ABTestListOptions struct {
+	Status     string
+	EntityType string
+	EntityID   *uuid.UUID
+	Limit      int
+	Offset     int
+}
+
+// ABTestResults contains A/B test results
+type ABTestResults struct {
+	TestID       uuid.UUID              `json:"test_id"`
+	TotalViews   int64                  `json:"total_views"`
+	VariantStats []ABVariantStats       `json:"variant_stats"`
+}
+
+// ABVariantStats contains per-variant statistics
+type ABVariantStats struct {
+	VariantID      uuid.UUID `json:"variant_id"`
+	VariantName    string    `json:"variant_name"`
+	Views          int64     `json:"views"`
+	AvgDwellTimeMs int64     `json:"avg_dwell_time_ms"`
+	AvgScrollDepth float64   `json:"avg_scroll_depth"`
 }
 
 // ContentRepository defines content versioning operations

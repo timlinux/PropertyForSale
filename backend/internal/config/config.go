@@ -23,6 +23,7 @@ type Config struct {
 // ServerConfig holds HTTP server configuration
 type ServerConfig struct {
 	Port            int
+	BaseURL         string
 	AllowedOrigins  []string
 	TrustedProxies  []string
 	ReadTimeout     int
@@ -66,6 +67,7 @@ func Load() (*Config, error) {
 		Env: getEnv("ENV", "development"),
 		Server: ServerConfig{
 			Port:            getEnvInt("PORT", 8080),
+			BaseURL:         getEnv("BASE_URL", ""),
 			AllowedOrigins:  getEnvSlice("CORS_ORIGINS", []string{"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"}),
 			TrustedProxies:  getEnvSlice("TRUSTED_PROXIES", []string{}),
 			ReadTimeout:     getEnvInt("READ_TIMEOUT", 15),

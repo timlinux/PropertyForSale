@@ -4,6 +4,8 @@
 package handler
 
 import (
+	"github.com/timlinux/PropertyForSale/backend/internal/config"
+	"github.com/timlinux/PropertyForSale/backend/internal/repository"
 	"github.com/timlinux/PropertyForSale/backend/internal/service"
 )
 
@@ -17,10 +19,12 @@ type Handlers struct {
 	Auth      *AuthHandler
 	Analytics *AnalyticsHandler
 	Version   *VersionHandler
+	ABTest    *ABTestHandler
+	SEO       *SEOHandler
 }
 
 // NewHandlers creates a new Handlers instance with all implementations
-func NewHandlers(services *service.Services, isDev bool) *Handlers {
+func NewHandlers(services *service.Services, repos *repository.Repositories, cfg *config.Config, isDev bool) *Handlers {
 	return &Handlers{
 		Property:  NewPropertyHandler(services.Property, services.Dwelling, services.Area, services.Media),
 		Dwelling:  NewDwellingHandler(services.Dwelling, services.Room),
@@ -30,5 +34,7 @@ func NewHandlers(services *service.Services, isDev bool) *Handlers {
 		Auth:      NewAuthHandler(services.Auth, isDev),
 		Analytics: NewAnalyticsHandler(services.Analytics),
 		Version:   NewVersionHandler(services.Content),
+		ABTest:    NewABTestHandler(repos.Analytics),
+		SEO:       NewSEOHandler(repos.Property, cfg),
 	}
 }
