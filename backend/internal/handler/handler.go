@@ -27,7 +27,7 @@ type Handlers struct {
 // NewHandlers creates a new Handlers instance with all implementations
 func NewHandlers(services *service.Services, repos *repository.Repositories, cfg *config.Config, isDev bool) *Handlers {
 	return &Handlers{
-		Property:  NewPropertyHandler(services.Property, services.Dwelling, services.Area, services.Media),
+		Property:  NewPropertyHandler(services.Property, services.Dwelling, services.Room, services.Area, services.Media),
 		Dwelling:  NewDwellingHandler(services.Dwelling, services.Room),
 		Room:      NewRoomHandler(services.Room),
 		Area:      NewAreaHandler(services.Area),

@@ -18,6 +18,7 @@ import (
 type PropertyHandler struct {
 	propertySvc *service.PropertyService
 	dwellingSvc *service.DwellingService
+	roomSvc     *service.RoomService
 	areaSvc     *service.AreaService
 	mediaSvc    *service.MediaService
 }
@@ -26,12 +27,14 @@ type PropertyHandler struct {
 func NewPropertyHandler(
 	propertySvc *service.PropertyService,
 	dwellingSvc *service.DwellingService,
+	roomSvc *service.RoomService,
 	areaSvc *service.AreaService,
 	mediaSvc *service.MediaService,
 ) *PropertyHandler {
 	return &PropertyHandler{
 		propertySvc: propertySvc,
 		dwellingSvc: dwellingSvc,
+		roomSvc:     roomSvc,
 		areaSvc:     areaSvc,
 		mediaSvc:    mediaSvc,
 	}
@@ -241,23 +244,61 @@ func (h *PropertyHandler) ListAreas(c *gin.Context) {
 }
 
 // ListMedia handles GET /api/v1/properties/:slug/media
+// Returns all media for the property and its sub-entities (dwellings, rooms, areas)
 func (h *PropertyHandler) ListMedia(c *gin.Context) {
 	slug := c.Param("slug")
+	ctx := c.Request.Context()
 
 	// Look up property by slug to get the ID
-	property, err := h.propertySvc.GetBySlug(c.Request.Context(), slug)
+	property, err := h.propertySvc.GetBySlug(ctx, slug)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "property not found"})
 		return
 	}
 
-	items, err := h.mediaSvc.ListByEntity(c.Request.Context(), media.EntityTypeProperty, property.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	// Collect all media items
+	var allMedia []media.Media
+
+	// Get property media
+	propertyMedia, err := h.mediaSvc.ListByEntity(ctx, media.EntityTypeProperty, property.ID)
+	if err == nil {
+		allMedia = append(allMedia, propertyMedia...)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": items})
+	// Get dwellings and their media
+	dwellings, err := h.dwellingSvc.ListByPropertyID(ctx, property.ID)
+	if err == nil {
+		for _, dwelling := range dwellings {
+			dwellingMedia, err := h.mediaSvc.ListByEntity(ctx, media.EntityTypeDwelling, dwelling.ID)
+			if err == nil {
+				allMedia = append(allMedia, dwellingMedia...)
+			}
+
+			// Get rooms for this dwelling and their media
+			rooms, err := h.roomSvc.ListByDwellingID(ctx, dwelling.ID)
+			if err == nil {
+				for _, room := range rooms {
+					roomMedia, err := h.mediaSvc.ListByEntity(ctx, media.EntityTypeRoom, room.ID)
+					if err == nil {
+						allMedia = append(allMedia, roomMedia...)
+					}
+				}
+			}
+		}
+	}
+
+	// Get areas and their media
+	areas, err := h.areaSvc.ListByPropertyID(ctx, property.ID)
+	if err == nil {
+		for _, area := range areas {
+			areaMedia, err := h.mediaSvc.ListByEntity(ctx, media.EntityTypeArea, area.ID)
+			if err == nil {
+				allMedia = append(allMedia, areaMedia...)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": allMedia})
 }
 
 func getIntQuery(c *gin.Context, key string, defaultValue int) int {
