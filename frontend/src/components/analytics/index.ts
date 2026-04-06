@@ -3,5 +3,4 @@
 
 export { StatCard } from './StatCard'
 export { DeviceChart } from './DeviceChart'
-export { PageViewsChart } from './PageViewsChart'
 export { VisitorMap } from './VisitorMap'

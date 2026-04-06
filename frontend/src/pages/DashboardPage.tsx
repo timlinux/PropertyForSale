@@ -33,9 +33,17 @@ import { api } from '../api'
 import {
   StatCard as AnalyticsStatCard,
   DeviceChart,
-  PageViewsChart,
   VisitorMap,
 } from '../components/analytics'
+
+// Simple placeholder for PageViewsChart
+const PageViewsChart = ({ data }: { data: Record<string, number> }) => (
+  <Box bg="white" borderRadius="2xl" p={6} border="1px solid" borderColor="gray.100">
+    <Text fontSize="sm" fontWeight="500" color="gray.400" mb={4}>Top Pages</Text>
+    <Text color="gray.500">Page views: {Object.keys(data).length} pages tracked</Text>
+  </Box>
+)
+
 import PropertyForm from '../components/property/PropertyForm'
 import PropertyEdit from '../components/property/PropertyEdit'
 

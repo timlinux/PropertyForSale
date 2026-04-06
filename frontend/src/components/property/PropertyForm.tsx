@@ -89,6 +89,7 @@ export default function PropertyForm() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['properties'] })
+      queryClient.invalidateQueries({ queryKey: ['my-properties'] })
       toast({
         title: 'Property created',
         description: `"${data.name}" has been created successfully.`,

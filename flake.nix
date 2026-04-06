@@ -103,7 +103,7 @@
           pname = "propertyforsale";
           version = "0.1.0";
           src = ./backend;
-          vendorHash = null; # Will be set once go.sum exists
+          vendorHash = "sha256-iOsC6/vIVSldgRT9JkvhTpfGf1z80XCSauPRgAXL/O4=";
           subPackages = [ "cmd/server" ];
         };
 
