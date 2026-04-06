@@ -85,7 +85,9 @@ func (s *MediaService) Upload(ctx context.Context, input UploadInput) (*media.Me
 	}
 
 	// Create media record with URL pointing to our static file server
+	now := time.Now()
 	m := &media.Media{
+		ID:         uuid.New(),
 		EntityType: input.EntityType,
 		EntityID:   input.EntityID,
 		Type:       mediaType,
@@ -94,6 +96,8 @@ func (s *MediaService) Upload(ctx context.Context, input UploadInput) (*media.Me
 		FileSize:   input.FileSize,
 		MimeType:   input.MimeType,
 		Autoplay:   input.Autoplay,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 
 	if err := s.mediaRepo.Create(ctx, m); err != nil {
