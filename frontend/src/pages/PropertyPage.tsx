@@ -29,6 +29,9 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
+  Image,
+  SimpleGrid,
+  AspectRatio,
 } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -39,7 +42,7 @@ import {
   FiCalendar,
   FiSquare,
 } from 'react-icons/fi'
-import { api, type Dwelling, type Area } from '../api'
+import { api, type Dwelling, type Area, type Media } from '../api'
 import PropertyMap from '../components/map/PropertyMap'
 import { MediaGallery, AmbientAudioPlayer } from '../components/media'
 import { usePageTracking } from '../hooks/usePageTracking'
@@ -95,6 +98,11 @@ export default function PropertyPage() {
     () => allMedia.filter((m) => m.type === 'audio'),
     [allMedia]
   )
+
+  // Get media for a specific entity
+  const getEntityMedia = (entityType: string, entityId: string) => {
+    return allMedia.filter((m) => m.entity_type === entityType && m.entity_id === entityId)
+  }
 
   // Create map markers from dwellings and areas
   const mapMarkers = useMemo(() => {
@@ -315,7 +323,10 @@ export default function PropertyPage() {
                               key={dwelling.id}
                               dwelling={dwelling}
                               isSelected={selectedEntity?.id === dwelling.id}
-                              onClick={() => setSelectedEntity({ type: 'dwelling', id: dwelling.id })}
+                              onClick={() => setSelectedEntity(
+                                selectedEntity?.id === dwelling.id ? null : { type: 'dwelling', id: dwelling.id }
+                              )}
+                              media={getEntityMedia('dwelling', dwelling.id)}
                             />
                           ))}
                         </VStack>
@@ -333,7 +344,10 @@ export default function PropertyPage() {
                               key={area.id}
                               area={area}
                               isSelected={selectedEntity?.id === area.id}
-                              onClick={() => setSelectedEntity({ type: 'area', id: area.id })}
+                              onClick={() => setSelectedEntity(
+                                selectedEntity?.id === area.id ? null : { type: 'area', id: area.id }
+                              )}
+                              media={getEntityMedia('area', area.id)}
                             />
                           ))}
                         </VStack>
@@ -437,11 +451,13 @@ interface DwellingCardProps {
   dwelling: Dwelling
   isSelected: boolean
   onClick: () => void
+  media: Media[]
 }
 
-function DwellingCard({ dwelling, isSelected, onClick }: DwellingCardProps) {
+function DwellingCard({ dwelling, isSelected, onClick, media }: DwellingCardProps) {
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const selectedBorder = useColorModeValue('luxury.gold', 'yellow.400')
+  const images = media.filter((m) => m.type === 'image')
 
   return (
     <Box
@@ -456,7 +472,12 @@ function DwellingCard({ dwelling, isSelected, onClick }: DwellingCardProps) {
     >
       <HStack justify="space-between" mb={2}>
         <Heading size="sm">{dwelling.name}</Heading>
-        <Badge colorScheme="blue">{dwelling.type}</Badge>
+        <HStack>
+          {images.length > 0 && (
+            <Badge colorScheme="green">{images.length} photos</Badge>
+          )}
+          <Badge colorScheme="blue">{dwelling.type}</Badge>
+        </HStack>
       </HStack>
 
       <HStack spacing={4} fontSize="sm" color="gray.600">
@@ -481,9 +502,28 @@ function DwellingCard({ dwelling, isSelected, onClick }: DwellingCardProps) {
       </HStack>
 
       {dwelling.description && (
-        <Text mt={2} fontSize="sm" color="gray.500" noOfLines={2}>
+        <Text mt={2} fontSize="sm" color="gray.500" noOfLines={isSelected ? undefined : 2}>
           {dwelling.description}
         </Text>
+      )}
+
+      {/* Show media gallery when selected */}
+      {isSelected && images.length > 0 && (
+        <Box mt={4} onClick={(e) => e.stopPropagation()}>
+          <Divider mb={3} />
+          <SimpleGrid columns={{ base: 2, md: 3 }} spacing={2}>
+            {images.map((img) => (
+              <AspectRatio key={img.id || img.url} ratio={4 / 3}>
+                <Image
+                  src={img.url}
+                  alt={img.file_name || 'Dwelling photo'}
+                  objectFit="cover"
+                  borderRadius="md"
+                />
+              </AspectRatio>
+            ))}
+          </SimpleGrid>
+        </Box>
       )}
     </Box>
   )
@@ -493,11 +533,13 @@ interface AreaCardProps {
   area: Area
   isSelected: boolean
   onClick: () => void
+  media: Media[]
 }
 
-function AreaCard({ area, isSelected, onClick }: AreaCardProps) {
+function AreaCard({ area, isSelected, onClick, media }: AreaCardProps) {
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const selectedBorder = useColorModeValue('green.400', 'green.300')
+  const images = media.filter((m) => m.type === 'image')
 
   return (
     <Box
@@ -512,7 +554,12 @@ function AreaCard({ area, isSelected, onClick }: AreaCardProps) {
     >
       <HStack justify="space-between" mb={2}>
         <Heading size="sm">{area.name}</Heading>
-        <Badge colorScheme="green">{area.type}</Badge>
+        <HStack>
+          {images.length > 0 && (
+            <Badge colorScheme="blue">{images.length} photos</Badge>
+          )}
+          <Badge colorScheme="green">{area.type}</Badge>
+        </HStack>
       </HStack>
 
       <HStack spacing={4} fontSize="sm" color="gray.600">
@@ -525,9 +572,28 @@ function AreaCard({ area, isSelected, onClick }: AreaCardProps) {
       </HStack>
 
       {area.description && (
-        <Text mt={2} fontSize="sm" color="gray.500" noOfLines={2}>
+        <Text mt={2} fontSize="sm" color="gray.500" noOfLines={isSelected ? undefined : 2}>
           {area.description}
         </Text>
+      )}
+
+      {/* Show media gallery when selected */}
+      {isSelected && images.length > 0 && (
+        <Box mt={4} onClick={(e) => e.stopPropagation()}>
+          <Divider mb={3} />
+          <SimpleGrid columns={{ base: 2, md: 3 }} spacing={2}>
+            {images.map((img) => (
+              <AspectRatio key={img.id || img.url} ratio={4 / 3}>
+                <Image
+                  src={img.url}
+                  alt={img.file_name || 'Area photo'}
+                  objectFit="cover"
+                  borderRadius="md"
+                />
+              </AspectRatio>
+            ))}
+          </SimpleGrid>
+        </Box>
       )}
     </Box>
   )
