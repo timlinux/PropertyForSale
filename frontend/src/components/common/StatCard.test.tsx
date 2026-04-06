@@ -14,7 +14,7 @@ function StatCard({ label, value, icon: Icon, color }: {
   color: string
 }) {
   return (
-    <div data-testid="stat-card">
+    <div data-testid="stat-card" style={{ borderColor: color }}>
       <div data-testid="stat-icon">
         <Icon />
       </div>

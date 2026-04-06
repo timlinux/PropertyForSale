@@ -620,20 +620,218 @@ function AreasTab({ property }: { property: Property }) {
   )
 }
 
-// Media Tab (placeholder)
-function MediaTab({ property: _property }: { property: Property }) {
-  void _property // Will be used for media upload
+// Media Tab
+function MediaTab({ property }: { property: Property }) {
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isDragOver, setIsDragOver] = useState(false)
+
+  const { data: mediaData, isLoading: mediaLoading } = useQuery({
+    queryKey: ['media', property.id],
+    queryFn: () => api.getPropertyMedia(property.id),
+  })
+
+  const media = mediaData?.data || []
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteMedia(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['media', property.id] })
+      toast({ title: 'Media deleted', status: 'success', duration: 3000 })
+    },
+    onError: () => {
+      toast({ title: 'Failed to delete media', status: 'error', duration: 3000 })
+    },
+  })
+
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    const totalFiles = files.length
+    let uploaded = 0
+
+    for (const file of Array.from(files)) {
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('entity_type', 'property')
+        formData.append('entity_id', property.id)
+
+        // Determine media type from file
+        let mediaType = 'document'
+        if (file.type.startsWith('image/')) mediaType = 'image'
+        else if (file.type.startsWith('video/')) mediaType = 'video'
+        else if (file.type.startsWith('audio/')) mediaType = 'audio'
+        else if (file.name.match(/\.(glb|gltf|obj|fbx)$/i)) mediaType = 'model3d'
+
+        formData.append('type', mediaType)
+
+        await api.uploadMedia(formData)
+        uploaded++
+        setUploadProgress(Math.round((uploaded / totalFiles) * 100))
+      } catch (error) {
+        toast({
+          title: `Failed to upload ${file.name}`,
+          status: 'error',
+          duration: 3000,
+        })
+      }
+    }
+
+    setIsUploading(false)
+    setUploadProgress(0)
+    queryClient.invalidateQueries({ queryKey: ['media', property.id] })
+    toast({
+      title: `Uploaded ${uploaded} file(s)`,
+      status: 'success',
+      duration: 3000,
+    })
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    handleFileUpload(e.dataTransfer.files)
+  }
+
+  const getMediaIcon = (type: string) => {
+    switch (type) {
+      case 'image': return '🖼️'
+      case 'video': return '🎬'
+      case 'video360': return '🌐'
+      case 'audio': return '🔊'
+      case 'model3d': return '📦'
+      default: return '📄'
+    }
+  }
+
   return (
-    <Card>
-      <CardBody>
-        <VStack py={8} spacing={4}>
-          <Text color="gray.500">Media upload coming soon...</Text>
-          <Text fontSize="sm" color="gray.400">
-            You'll be able to upload images, videos, 360° videos, and 3D models here.
-          </Text>
-        </VStack>
-      </CardBody>
-    </Card>
+    <VStack spacing={6} align="stretch">
+      {/* Upload area */}
+      <Card>
+        <CardBody>
+          <Box
+            p={8}
+            border="2px dashed"
+            borderColor={isDragOver ? 'blue.400' : 'gray.200'}
+            borderRadius="lg"
+            bg={isDragOver ? 'blue.50' : 'gray.50'}
+            textAlign="center"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            transition="all 0.2s"
+          >
+            {isUploading ? (
+              <VStack spacing={4}>
+                <Spinner size="lg" color="blue.500" />
+                <Text>Uploading... {uploadProgress}%</Text>
+              </VStack>
+            ) : (
+              <VStack spacing={4}>
+                <Text fontSize="4xl">📤</Text>
+                <Text fontWeight="500">Drag & drop files here</Text>
+                <Text fontSize="sm" color="gray.500">
+                  or click to select files
+                </Text>
+                <Input
+                  type="file"
+                  multiple
+                  accept="image/*,video/*,audio/*,.glb,.gltf,.obj"
+                  onChange={(e) => handleFileUpload(e.target.files)}
+                  position="absolute"
+                  opacity={0}
+                  cursor="pointer"
+                  top={0}
+                  left={0}
+                  w="100%"
+                  h="100%"
+                />
+                <Text fontSize="xs" color="gray.400">
+                  Supports: Images, Videos, Audio, 3D Models (.glb, .gltf, .obj)
+                </Text>
+              </VStack>
+            )}
+          </Box>
+        </CardBody>
+      </Card>
+
+      {/* Media grid */}
+      {mediaLoading ? (
+        <Center py={8}>
+          <Spinner />
+        </Center>
+      ) : media.length === 0 ? (
+        <Card>
+          <CardBody>
+            <Text color="gray.500" textAlign="center" py={8}>
+              No media uploaded yet. Upload images, videos, or 3D models above.
+            </Text>
+          </CardBody>
+        </Card>
+      ) : (
+        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={4}>
+          {media.map((item) => (
+            <Card key={item.id} position="relative" overflow="hidden">
+              <CardBody p={0}>
+                {item.type === 'image' ? (
+                  <Box
+                    as="img"
+                    src={item.thumbnail_url || item.url}
+                    alt={item.file_name}
+                    w="100%"
+                    h="150px"
+                    objectFit="cover"
+                  />
+                ) : (
+                  <Center h="150px" bg="gray.100">
+                    <VStack>
+                      <Text fontSize="3xl">{getMediaIcon(item.type)}</Text>
+                      <Text fontSize="xs" color="gray.500" textTransform="uppercase">
+                        {item.type}
+                      </Text>
+                    </VStack>
+                  </Center>
+                )}
+                <Box p={2}>
+                  <Text fontSize="xs" noOfLines={1} title={item.file_name}>
+                    {item.file_name}
+                  </Text>
+                  <HStack justify="space-between" mt={1}>
+                    <Text fontSize="xs" color="gray.500">
+                      {(item.file_size / 1024 / 1024).toFixed(2)} MB
+                    </Text>
+                    <IconButton
+                      aria-label="Delete media"
+                      icon={<FiTrash2 />}
+                      size="xs"
+                      colorScheme="red"
+                      variant="ghost"
+                      onClick={() => deleteMutation.mutate(item.id)}
+                      isLoading={deleteMutation.isPending}
+                    />
+                  </HStack>
+                </Box>
+              </CardBody>
+            </Card>
+          ))}
+        </SimpleGrid>
+      )}
+    </VStack>
   )
 }
 
