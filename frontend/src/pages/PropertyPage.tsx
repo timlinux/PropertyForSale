@@ -62,21 +62,21 @@ export default function PropertyPage() {
   })
 
   const { data: dwellingsData } = useQuery({
-    queryKey: ['property-dwellings', property?.id],
-    queryFn: () => api.getPropertyDwellings(property!.id),
-    enabled: !!property?.id,
+    queryKey: ['property-dwellings', property?.slug],
+    queryFn: () => api.getPropertyDwellings(property!.slug),
+    enabled: !!property?.slug,
   })
 
   const { data: areasData } = useQuery({
-    queryKey: ['property-areas', property?.id],
-    queryFn: () => api.getPropertyAreas(property!.id),
-    enabled: !!property?.id,
+    queryKey: ['property-areas', property?.slug],
+    queryFn: () => api.getPropertyAreas(property!.slug),
+    enabled: !!property?.slug,
   })
 
   const { data: mediaData } = useQuery({
-    queryKey: ['property-media', property?.id],
-    queryFn: () => api.getPropertyMedia(property!.id),
-    enabled: !!property?.id,
+    queryKey: ['property-media', property?.slug],
+    queryFn: () => api.getPropertyMedia(property!.slug),
+    enabled: !!property?.slug,
   })
 
   const dwellings = dwellingsData?.data || []
