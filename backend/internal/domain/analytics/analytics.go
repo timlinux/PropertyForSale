@@ -12,23 +12,23 @@ import (
 
 // PageView represents a single page view event
 type PageView struct {
-	ID          uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	SessionID   string    `json:"session_id" gorm:"index;not null"`
+	ID          uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	SessionID   string     `json:"session_id" gorm:"index;not null"`
 	PropertyID  *uuid.UUID `json:"property_id" gorm:"type:uuid;index"`
-	PagePath    string    `json:"page_path" gorm:"not null"`
-	DwellTimeMs int64     `json:"dwell_time_ms"`
-	ScrollDepth int       `json:"scroll_depth"` // 0-100 percentage
-	IPAddress   string    `json:"-"`            // Stored temporarily for GeoIP resolution
-	Latitude    float64   `json:"latitude"`
-	Longitude   float64   `json:"longitude"`
-	Country     string    `json:"country"`
-	Region      string    `json:"region"`
-	City        string    `json:"city"`
-	Referrer    string    `json:"referrer"`
-	UserAgent   string    `json:"user_agent"`
-	DeviceType  string    `json:"device_type"` // desktop, mobile, tablet
+	PagePath    string     `json:"page_path" gorm:"not null"`
+	DwellTimeMs int64      `json:"dwell_time_ms"`
+	ScrollDepth int        `json:"scroll_depth"` // 0-100 percentage
+	IPAddress   string     `json:"-"`            // Stored temporarily for GeoIP resolution
+	Latitude    float64    `json:"latitude"`
+	Longitude   float64    `json:"longitude"`
+	Country     string     `json:"country"`
+	Region      string     `json:"region"`
+	City        string     `json:"city"`
+	Referrer    string     `json:"referrer"`
+	UserAgent   string     `json:"user_agent"`
+	DeviceType  string     `json:"device_type"` // desktop, mobile, tablet
 	ABVariantID *uuid.UUID `json:"ab_variant_id" gorm:"type:uuid"`
-	CreatedAt   time.Time `json:"created_at" gorm:"index"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"index"`
 }
 
 // TableName returns the table name for GORM
@@ -71,13 +71,13 @@ func (ABTest) TableName() string {
 
 // ABVariant represents a variant in an A/B test
 type ABVariant struct {
-	ID        uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	ABTestID  uuid.UUID `json:"ab_test_id" gorm:"type:uuid;not null;index"`
-	Name      string    `json:"name" gorm:"not null"`
+	ID        uuid.UUID   `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	ABTestID  uuid.UUID   `json:"ab_test_id" gorm:"type:uuid;not null;index"`
+	Name      string      `json:"name" gorm:"not null"`
 	Content   types.JSONB `json:"content" gorm:"type:text;default:'{}'"`
-	Weight    int       `json:"weight" gorm:"default:50"` // Percentage weight
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Weight    int         `json:"weight" gorm:"default:50"` // Percentage weight
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
 // TableName returns the table name for GORM

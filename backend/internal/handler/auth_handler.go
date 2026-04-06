@@ -40,7 +40,7 @@ func (h *AuthHandler) InitiateOAuth(c *gin.Context) {
 	_, err := goth.GetProvider(provider)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error":              fmt.Sprintf("unsupported provider: %s", provider),
+			"error":               fmt.Sprintf("unsupported provider: %s", provider),
 			"available_providers": getAvailableProviders(),
 		})
 		return

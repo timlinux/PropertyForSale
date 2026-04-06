@@ -21,27 +21,27 @@ const (
 
 // Property represents a real estate property listing
 type Property struct {
-	ID           uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	OwnerID      uuid.UUID  `json:"owner_id" gorm:"type:uuid;not null;index"`
-	Name         string     `json:"name" gorm:"not null"`
-	Slug         string     `json:"slug" gorm:"uniqueIndex;not null"`
-	Description  string     `json:"description"`
-	PriceMin     float64    `json:"price_min"`
-	PriceMax     float64    `json:"price_max"`
-	Currency     string     `json:"currency" gorm:"default:'EUR'"`
-	AddressLine1 string     `json:"address_line1"`
-	AddressLine2 string     `json:"address_line2"`
-	City         string     `json:"city"`
-	State        string     `json:"state"`
-	PostalCode   string     `json:"postal_code"`
-	Country      string     `json:"country"`
-	Latitude     float64    `json:"latitude"`
-	Longitude    float64    `json:"longitude"`
+	ID           uuid.UUID   `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	OwnerID      uuid.UUID   `json:"owner_id" gorm:"type:uuid;not null;index"`
+	Name         string      `json:"name" gorm:"not null"`
+	Slug         string      `json:"slug" gorm:"uniqueIndex;not null"`
+	Description  string      `json:"description"`
+	PriceMin     float64     `json:"price_min"`
+	PriceMax     float64     `json:"price_max"`
+	Currency     string      `json:"currency" gorm:"default:'EUR'"`
+	AddressLine1 string      `json:"address_line1"`
+	AddressLine2 string      `json:"address_line2"`
+	City         string      `json:"city"`
+	State        string      `json:"state"`
+	PostalCode   string      `json:"postal_code"`
+	Country      string      `json:"country"`
+	Latitude     float64     `json:"latitude"`
+	Longitude    float64     `json:"longitude"`
 	Status       Status      `json:"status" gorm:"default:'draft'"`
 	Metadata     types.JSONB `json:"metadata" gorm:"type:text;default:'{}'"`
 	CreatedAt    time.Time   `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	PublishedAt  *time.Time `json:"published_at"`
+	UpdatedAt    time.Time   `json:"updated_at"`
+	PublishedAt  *time.Time  `json:"published_at"`
 
 	// Relations
 	Dwellings []Dwelling `json:"dwellings,omitempty" gorm:"foreignKey:PropertyID"`

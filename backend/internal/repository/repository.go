@@ -146,9 +146,9 @@ type ABTestListOptions struct {
 
 // ABTestResults contains A/B test results
 type ABTestResults struct {
-	TestID       uuid.UUID              `json:"test_id"`
-	TotalViews   int64                  `json:"total_views"`
-	VariantStats []ABVariantStats       `json:"variant_stats"`
+	TestID       uuid.UUID        `json:"test_id"`
+	TotalViews   int64            `json:"total_views"`
+	VariantStats []ABVariantStats `json:"variant_stats"`
 }
 
 // ABVariantStats contains per-variant statistics
@@ -205,18 +205,18 @@ type PageRepository interface {
 
 // ListOptions contains common listing parameters
 type ListOptions struct {
-	Offset     int
-	Limit      int
-	Search     string
-	Status     string
-	OrderBy    string
-	OrderDir   string
-	OwnerID    *uuid.UUID
-	MinPrice   *float64
-	MaxPrice   *float64
-	Latitude   *float64
-	Longitude  *float64
-	RadiusKm   *float64
+	Offset    int
+	Limit     int
+	Search    string
+	Status    string
+	OrderBy   string
+	OrderDir  string
+	OwnerID   *uuid.UUID
+	MinPrice  *float64
+	MaxPrice  *float64
+	Latitude  *float64
+	Longitude *float64
+	RadiusKm  *float64
 }
 
 // PageViewOptions contains page view query parameters

@@ -32,21 +32,21 @@ const (
 
 // Page represents a CMS page
 type Page struct {
-	ID            uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	Slug          string         `gorm:"uniqueIndex;not null" json:"slug"`
-	Title         string         `gorm:"not null" json:"title"`
-	Description   string         `json:"description"`
-	Template      PageTemplate   `gorm:"default:'blank'" json:"template"`
-	Status        PageStatus     `gorm:"default:'draft'" json:"status"`
-	MetaTitle     string         `json:"meta_title"`
-	MetaDesc      string         `json:"meta_description"`
-	OGImage       string         `json:"og_image"`
-	VersionNumber int            `gorm:"default:1" json:"version_number"`
-	AuthorID      uuid.UUID      `gorm:"type:uuid" json:"author_id"`
-	PublishedAt   *time.Time     `json:"published_at"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	Blocks        []PageBlock    `gorm:"foreignKey:PageID;constraint:OnDelete:CASCADE" json:"blocks,omitempty"`
+	ID            uuid.UUID    `gorm:"type:uuid;primaryKey" json:"id"`
+	Slug          string       `gorm:"uniqueIndex;not null" json:"slug"`
+	Title         string       `gorm:"not null" json:"title"`
+	Description   string       `json:"description"`
+	Template      PageTemplate `gorm:"default:'blank'" json:"template"`
+	Status        PageStatus   `gorm:"default:'draft'" json:"status"`
+	MetaTitle     string       `json:"meta_title"`
+	MetaDesc      string       `json:"meta_description"`
+	OGImage       string       `json:"og_image"`
+	VersionNumber int          `gorm:"default:1" json:"version_number"`
+	AuthorID      uuid.UUID    `gorm:"type:uuid" json:"author_id"`
+	PublishedAt   *time.Time   `json:"published_at"`
+	CreatedAt     time.Time    `json:"created_at"`
+	UpdatedAt     time.Time    `json:"updated_at"`
+	Blocks        []PageBlock  `gorm:"foreignKey:PageID;constraint:OnDelete:CASCADE" json:"blocks,omitempty"`
 }
 
 // TableName returns the table name for GORM
@@ -78,14 +78,14 @@ const (
 
 // PageBlock represents a content block within a page
 type PageBlock struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	PageID    uuid.UUID `gorm:"type:uuid;not null;index" json:"page_id"`
-	BlockType BlockType `gorm:"not null" json:"block_type"`
-	Position  int       `gorm:"not null" json:"position"`
+	ID        uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
+	PageID    uuid.UUID   `gorm:"type:uuid;not null;index" json:"page_id"`
+	BlockType BlockType   `gorm:"not null" json:"block_type"`
+	Position  int         `gorm:"not null" json:"position"`
 	Data      types.JSONB `gorm:"type:text" json:"data"`
 	Settings  types.JSONB `gorm:"type:text" json:"settings"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
 // TableName returns the table name for GORM
@@ -95,14 +95,14 @@ func (PageBlock) TableName() string {
 
 // BlockTemplate represents reusable block templates
 type BlockTemplate struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	Name        string    `gorm:"not null" json:"name"`
-	Description string    `json:"description"`
-	BlockType   BlockType `gorm:"not null" json:"block_type"`
+	ID          uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
+	Name        string      `gorm:"not null" json:"name"`
+	Description string      `json:"description"`
+	BlockType   BlockType   `gorm:"not null" json:"block_type"`
 	Schema      types.JSONB `gorm:"type:text" json:"schema"`
 	DefaultData types.JSONB `gorm:"type:text" json:"default_data"`
-	Thumbnail   string    `json:"thumbnail"`
-	CreatedAt   time.Time `json:"created_at"`
+	Thumbnail   string      `json:"thumbnail"`
+	CreatedAt   time.Time   `json:"created_at"`
 }
 
 // TableName returns the table name for GORM
@@ -112,15 +112,15 @@ func (BlockTemplate) TableName() string {
 
 // PageVersion stores historical versions of pages
 type PageVersion struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	PageID        uuid.UUID `gorm:"type:uuid;not null;index" json:"page_id"`
-	VersionNumber int       `gorm:"not null" json:"version_number"`
-	Title         string    `json:"title"`
+	ID            uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
+	PageID        uuid.UUID   `gorm:"type:uuid;not null;index" json:"page_id"`
+	VersionNumber int         `gorm:"not null" json:"version_number"`
+	Title         string      `json:"title"`
 	Data          types.JSONB `gorm:"type:text" json:"data"` // Full page snapshot
 	Diff          types.JSONB `gorm:"type:text" json:"diff"` // Changes from previous
-	AuthorID      uuid.UUID `gorm:"type:uuid" json:"author_id"`
-	Note          string    `json:"note"`
-	CreatedAt     time.Time `json:"created_at"`
+	AuthorID      uuid.UUID   `gorm:"type:uuid" json:"author_id"`
+	Note          string      `json:"note"`
+	CreatedAt     time.Time   `json:"created_at"`
 }
 
 // TableName returns the table name for GORM

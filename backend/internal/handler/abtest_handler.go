@@ -124,12 +124,12 @@ func (h *ABTestHandler) ListABTests(c *gin.Context) {
 
 // UpdateABTestRequest represents the request body for updating an A/B test
 type UpdateABTestRequest struct {
-	Name        *string              `json:"name"`
-	Description *string              `json:"description"`
-	Status      *analytics.ABTestStatus `json:"status"`
-	StartDate   *time.Time           `json:"start_date"`
-	EndDate     *time.Time           `json:"end_date"`
-	WinnerVariantID *string          `json:"winner_variant_id"`
+	Name            *string                 `json:"name"`
+	Description     *string                 `json:"description"`
+	Status          *analytics.ABTestStatus `json:"status"`
+	StartDate       *time.Time              `json:"start_date"`
+	EndDate         *time.Time              `json:"end_date"`
+	WinnerVariantID *string                 `json:"winner_variant_id"`
 }
 
 // UpdateABTest handles PUT /api/v1/ab-tests/:id

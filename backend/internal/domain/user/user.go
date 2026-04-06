@@ -25,9 +25,9 @@ type User struct {
 	Name         string    `json:"name"`
 	AvatarURL    string    `json:"avatar_url"`
 	Role         Role      `json:"role" gorm:"default:'viewer'"`
-	Provider     string    `json:"provider"`      // google, apple, microsoft, github, facebook
-	ProviderID   string    `json:"provider_id"`   // ID from the OAuth provider
-	RefreshToken string    `json:"-"`             // Encrypted refresh token
+	Provider     string    `json:"provider"`    // google, apple, microsoft, github, facebook
+	ProviderID   string    `json:"provider_id"` // ID from the OAuth provider
+	RefreshToken string    `json:"-"`           // Encrypted refresh token
 	LastLoginAt  time.Time `json:"last_login_at"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
