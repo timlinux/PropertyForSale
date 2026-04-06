@@ -11,6 +11,7 @@ import {
   AccordionPanel,
   Alert,
   AlertIcon,
+  Badge,
   Box,
   Button,
   Card,
@@ -627,18 +628,49 @@ function MediaTab({ property }: { property: Property }) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [selectedEntityType, setSelectedEntityType] = useState<'property' | 'dwelling' | 'room' | 'area'>('property')
+  const [selectedEntityId, setSelectedEntityId] = useState<string>(property.id)
+
+  // Fetch dwellings
+  const { data: dwellingsData } = useQuery({
+    queryKey: ['dwellings', property.slug],
+    queryFn: () => api.getPropertyDwellings(property.slug),
+  })
+  const dwellings = dwellingsData?.data || []
+
+  // Fetch areas
+  const { data: areasData } = useQuery({
+    queryKey: ['areas', property.slug],
+    queryFn: () => api.getPropertyAreas(property.slug),
+  })
+  const areas = areasData?.data || []
+
+  // Build rooms list from all dwellings
+  const allRooms: Array<Room & { dwellingName: string }> = []
+  dwellings.forEach((dwelling: Dwelling) => {
+    if (dwelling.rooms) {
+      dwelling.rooms.forEach((room: Room) => {
+        allRooms.push({ ...room, dwellingName: dwelling.name })
+      })
+    }
+  })
 
   const { data: mediaData, isLoading: mediaLoading } = useQuery({
-    queryKey: ['media', property.id],
-    queryFn: () => api.getPropertyMedia(property.id),
+    queryKey: ['media', property.slug],
+    queryFn: () => api.getPropertyMedia(property.slug),
   })
 
   const media = mediaData?.data || []
 
+  // Filter media by selected entity
+  const filteredMedia = media.filter((item) =>
+    item.entity_type === selectedEntityType && item.entity_id === selectedEntityId
+  )
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteMedia(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['media', property.id] })
+      queryClient.invalidateQueries({ queryKey: ['media', property.slug] })
       toast({ title: 'Media deleted', status: 'success', duration: 3000 })
     },
     onError: () => {
@@ -646,8 +678,28 @@ function MediaTab({ property }: { property: Property }) {
     },
   })
 
+  // Update selected entity ID when type changes
+  const handleEntityTypeChange = (type: 'property' | 'dwelling' | 'room' | 'area') => {
+    setSelectedEntityType(type)
+    if (type === 'property') {
+      setSelectedEntityId(property.id)
+    } else if (type === 'dwelling' && dwellings.length > 0) {
+      setSelectedEntityId(dwellings[0].id)
+    } else if (type === 'room' && allRooms.length > 0) {
+      setSelectedEntityId(allRooms[0].id)
+    } else if (type === 'area' && areas.length > 0) {
+      setSelectedEntityId(areas[0].id)
+    } else {
+      setSelectedEntityId('')
+    }
+  }
+
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
+    if (!selectedEntityId) {
+      toast({ title: 'Please select an entity first', status: 'warning', duration: 3000 })
+      return
+    }
 
     setIsUploading(true)
     setUploadProgress(0)
@@ -659,8 +711,8 @@ function MediaTab({ property }: { property: Property }) {
       try {
         const formData = new FormData()
         formData.append('file', file)
-        formData.append('entity_type', 'property')
-        formData.append('entity_id', property.id)
+        formData.append('entity_type', selectedEntityType)
+        formData.append('entity_id', selectedEntityId)
 
         // Determine media type from file
         let mediaType = 'document'
@@ -685,7 +737,7 @@ function MediaTab({ property }: { property: Property }) {
 
     setIsUploading(false)
     setUploadProgress(0)
-    queryClient.invalidateQueries({ queryKey: ['media', property.id] })
+    queryClient.invalidateQueries({ queryKey: ['media', property.slug] })
     toast({
       title: `Uploaded ${uploaded} file(s)`,
       status: 'success',
@@ -719,8 +771,84 @@ function MediaTab({ property }: { property: Property }) {
     }
   }
 
+  const getEntityLabel = (entityType: string, entityId: string) => {
+    if (entityType === 'property') return 'Property'
+    if (entityType === 'dwelling') {
+      const d = dwellings.find((d: Dwelling) => d.id === entityId)
+      return d ? `Dwelling: ${d.name}` : 'Dwelling'
+    }
+    if (entityType === 'room') {
+      const r = allRooms.find(r => r.id === entityId)
+      return r ? `Room: ${r.name}` : 'Room'
+    }
+    if (entityType === 'area') {
+      const a = areas.find((a: Area) => a.id === entityId)
+      return a ? `Area: ${a.name}` : 'Area'
+    }
+    return entityType
+  }
+
   return (
     <VStack spacing={6} align="stretch">
+      {/* Entity selector */}
+      <Card>
+        <CardBody>
+          <VStack spacing={4} align="stretch">
+            <Text fontWeight="500">Upload media to:</Text>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              <FormControl>
+                <FormLabel>Entity Type</FormLabel>
+                <Select
+                  value={selectedEntityType}
+                  onChange={(e) => handleEntityTypeChange(e.target.value as typeof selectedEntityType)}
+                >
+                  <option value="property">Whole Property</option>
+                  <option value="dwelling" disabled={dwellings.length === 0}>
+                    Dwelling {dwellings.length === 0 && '(none added)'}
+                  </option>
+                  <option value="room" disabled={allRooms.length === 0}>
+                    Room {allRooms.length === 0 && '(none added)'}
+                  </option>
+                  <option value="area" disabled={areas.length === 0}>
+                    Outside Area {areas.length === 0 && '(none added)'}
+                  </option>
+                </Select>
+              </FormControl>
+
+              {selectedEntityType !== 'property' && (
+                <FormControl>
+                  <FormLabel>
+                    {selectedEntityType === 'dwelling' && 'Select Dwelling'}
+                    {selectedEntityType === 'room' && 'Select Room'}
+                    {selectedEntityType === 'area' && 'Select Area'}
+                  </FormLabel>
+                  <Select
+                    value={selectedEntityId}
+                    onChange={(e) => setSelectedEntityId(e.target.value)}
+                  >
+                    {selectedEntityType === 'dwelling' &&
+                      dwellings.map((d: Dwelling) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))
+                    }
+                    {selectedEntityType === 'room' &&
+                      allRooms.map((r) => (
+                        <option key={r.id} value={r.id}>{r.dwellingName} → {r.name}</option>
+                      ))
+                    }
+                    {selectedEntityType === 'area' &&
+                      areas.map((a: Area) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))
+                    }
+                  </Select>
+                </FormControl>
+              )}
+            </SimpleGrid>
+          </VStack>
+        </CardBody>
+      </Card>
+
       {/* Upload area */}
       <Card>
         <CardBody>
@@ -735,6 +863,7 @@ function MediaTab({ property }: { property: Property }) {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             transition="all 0.2s"
+            position="relative"
           >
             {isUploading ? (
               <VStack spacing={4}>
@@ -770,66 +899,88 @@ function MediaTab({ property }: { property: Property }) {
         </CardBody>
       </Card>
 
-      {/* Media grid */}
-      {mediaLoading ? (
-        <Center py={8}>
-          <Spinner />
-        </Center>
-      ) : media.length === 0 ? (
+      {/* Media grid for selected entity */}
+      <Card>
+        <CardBody>
+          <HStack justify="space-between" mb={4}>
+            <Text fontWeight="500">
+              Media for: {getEntityLabel(selectedEntityType, selectedEntityId)}
+            </Text>
+            <Badge colorScheme="blue">{filteredMedia.length} item(s)</Badge>
+          </HStack>
+
+          {mediaLoading ? (
+            <Center py={8}>
+              <Spinner />
+            </Center>
+          ) : filteredMedia.length === 0 ? (
+            <Text color="gray.500" textAlign="center" py={8}>
+              No media for this {selectedEntityType}. Upload files above.
+            </Text>
+          ) : (
+            <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={4}>
+              {filteredMedia.map((item) => (
+                <Card key={item.id} position="relative" overflow="hidden" variant="outline">
+                  <CardBody p={0}>
+                    {item.type === 'image' ? (
+                      <Box
+                        as="img"
+                        src={item.thumbnail_url || item.url}
+                        alt={item.file_name}
+                        w="100%"
+                        h="150px"
+                        objectFit="cover"
+                      />
+                    ) : (
+                      <Center h="150px" bg="gray.100">
+                        <VStack>
+                          <Text fontSize="3xl">{getMediaIcon(item.type)}</Text>
+                          <Text fontSize="xs" color="gray.500" textTransform="uppercase">
+                            {item.type}
+                          </Text>
+                        </VStack>
+                      </Center>
+                    )}
+                    <Box p={2}>
+                      <Text fontSize="xs" noOfLines={1} title={item.file_name}>
+                        {item.file_name}
+                      </Text>
+                      <HStack justify="space-between" mt={1}>
+                        <Text fontSize="xs" color="gray.500">
+                          {(item.file_size / 1024 / 1024).toFixed(2)} MB
+                        </Text>
+                        <IconButton
+                          aria-label="Delete media"
+                          icon={<FiTrash2 />}
+                          size="xs"
+                          colorScheme="red"
+                          variant="ghost"
+                          onClick={() => deleteMutation.mutate(item.id)}
+                          isLoading={deleteMutation.isPending}
+                        />
+                      </HStack>
+                    </Box>
+                  </CardBody>
+                </Card>
+              ))}
+            </SimpleGrid>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* All media summary */}
+      {media.length > 0 && (
         <Card>
           <CardBody>
-            <Text color="gray.500" textAlign="center" py={8}>
-              No media uploaded yet. Upload images, videos, or 3D models above.
-            </Text>
+            <Text fontWeight="500" mb={2}>All Property Media ({media.length} total)</Text>
+            <HStack spacing={4} flexWrap="wrap">
+              <Badge>Property: {media.filter(m => m.entity_type === 'property').length}</Badge>
+              <Badge>Dwellings: {media.filter(m => m.entity_type === 'dwelling').length}</Badge>
+              <Badge>Rooms: {media.filter(m => m.entity_type === 'room').length}</Badge>
+              <Badge>Areas: {media.filter(m => m.entity_type === 'area').length}</Badge>
+            </HStack>
           </CardBody>
         </Card>
-      ) : (
-        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={4}>
-          {media.map((item) => (
-            <Card key={item.id} position="relative" overflow="hidden">
-              <CardBody p={0}>
-                {item.type === 'image' ? (
-                  <Box
-                    as="img"
-                    src={item.thumbnail_url || item.url}
-                    alt={item.file_name}
-                    w="100%"
-                    h="150px"
-                    objectFit="cover"
-                  />
-                ) : (
-                  <Center h="150px" bg="gray.100">
-                    <VStack>
-                      <Text fontSize="3xl">{getMediaIcon(item.type)}</Text>
-                      <Text fontSize="xs" color="gray.500" textTransform="uppercase">
-                        {item.type}
-                      </Text>
-                    </VStack>
-                  </Center>
-                )}
-                <Box p={2}>
-                  <Text fontSize="xs" noOfLines={1} title={item.file_name}>
-                    {item.file_name}
-                  </Text>
-                  <HStack justify="space-between" mt={1}>
-                    <Text fontSize="xs" color="gray.500">
-                      {(item.file_size / 1024 / 1024).toFixed(2)} MB
-                    </Text>
-                    <IconButton
-                      aria-label="Delete media"
-                      icon={<FiTrash2 />}
-                      size="xs"
-                      colorScheme="red"
-                      variant="ghost"
-                      onClick={() => deleteMutation.mutate(item.id)}
-                      isLoading={deleteMutation.isPending}
-                    />
-                  </HStack>
-                </Box>
-              </CardBody>
-            </Card>
-          ))}
-        </SimpleGrid>
       )}
     </VStack>
   )
