@@ -16,16 +16,14 @@ import {
   InputLeftElement,
   useDisclosure,
   Kbd,
-  Badge,
   Tooltip,
-  Fade,
-  useColorModeValue,
+  Image,
+  Flex,
 } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
 import {
   FiChevronLeft,
   FiChevronRight,
-  FiChevronUp,
   FiSearch,
   FiHome,
   FiGrid,
@@ -33,6 +31,8 @@ import {
   FiX,
   FiImage,
   FiStar,
+  FiInfo,
+  FiMaximize,
 } from 'react-icons/fi'
 import { api } from '../api'
 import { usePageTracking } from '../hooks/usePageTracking'
@@ -67,20 +67,25 @@ export default function PropertyExplorer() {
     propertySlug: slug || '',
   })
   const [mediaIndex, setMediaIndex] = useState(0)
-  const [showControls, setShowControls] = useState(true)
+  const [showUI, setShowUI] = useState(true)
+  const [showInfo, setShowInfo] = useState(false)
+  const [showFilmstrip, setShowFilmstrip] = useState(false)
   const [rippleOrigin, setRippleOrigin] = useState({ x: 50, y: 50 })
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [nextImageUrl, setNextImageUrl] = useState<string | null>(null)
+
+  // Touch/swipe handling
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
 
   // Quick jump panel
   const { isOpen: isSearchOpen, onOpen: onSearchOpen, onClose: onSearchClose } = useDisclosure()
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const [selectedSearchIndex, setSelectedSearchIndex] = useState(0)
 
-  // Hide controls timer
-  const controlsTimerRef = useRef<NodeJS.Timeout>()
-
-  const controlsBg = useColorModeValue('blackAlpha.700', 'blackAlpha.800')
+  // Auto-hide UI timer
+  const uiTimerRef = useRef<NodeJS.Timeout>()
 
   // Fetch property data
   const { data: property, isLoading: propertyLoading } = useQuery({
@@ -140,7 +145,6 @@ export default function PropertyExplorer() {
     return allMedia
       .filter(m => m.entity_type === entityType && m.entity_id === entityId && m.type === 'image')
       .sort((a, b) => {
-        // Starred images first
         if (a.starred && !b.starred) return -1
         if (!a.starred && b.starred) return 1
         return a.sort_order - b.sort_order
@@ -167,7 +171,6 @@ export default function PropertyExplorer() {
       children: [],
     }
 
-    // Add dwellings with their rooms
     dwellings.forEach(dwelling => {
       const dwellingNode: EntityNode = {
         id: dwelling.id,
@@ -178,7 +181,6 @@ export default function PropertyExplorer() {
         children: [],
       }
 
-      // Add rooms
       if (dwelling.rooms) {
         dwelling.rooms.forEach(room => {
           dwellingNode.children?.push({
@@ -194,7 +196,6 @@ export default function PropertyExplorer() {
       propertyNode.children?.push(dwellingNode)
     })
 
-    // Add areas
     areas.forEach(area => {
       propertyNode.children?.push({
         id: area.id,
@@ -227,6 +228,17 @@ export default function PropertyExplorer() {
     const query = searchQuery.toLowerCase()
     return flatEntities.filter(e => e.name.toLowerCase().includes(query))
   }, [flatEntities, searchQuery])
+
+  // Reset search index when results change
+  useEffect(() => {
+    setSelectedSearchIndex(0)
+  }, [filteredEntities])
+
+  // Generate random ripple origin
+  const getRandomRippleOrigin = useCallback(() => ({
+    x: 15 + Math.random() * 70,
+    y: 15 + Math.random() * 70,
+  }), [])
 
   // Navigation functions
   const goToEntity = useCallback((node: EntityNode) => {
@@ -263,6 +275,7 @@ export default function PropertyExplorer() {
     }
 
     onSearchClose()
+    setSearchQuery('')
   }, [slug, dwellings, onSearchClose])
 
   const goUp = useCallback(() => {
@@ -279,15 +292,22 @@ export default function PropertyExplorer() {
     }
   }, [context])
 
-  // Generate random ripple origin for variety
-  const getRandomRippleOrigin = useCallback(() => ({
-    x: 15 + Math.random() * 70,
-    y: 15 + Math.random() * 70,
-  }), [])
+  // Trigger ripple when entity changes
+  const prevContextRef = useRef(context)
+  useEffect(() => {
+    if (prevContextRef.current !== context && currentMedia.length > 0) {
+      setNextImageUrl(currentMedia[0]?.url || null)
+      setRippleOrigin(getRandomRippleOrigin())
+      setIsTransitioning(true)
+      setTimeout(() => {
+        setIsTransitioning(false)
+      }, 500)
+    }
+    prevContextRef.current = context
+  }, [context, currentMedia, getRandomRippleOrigin])
 
   const navigateMedia = useCallback((direction: 'next' | 'prev') => {
     if (direction === 'next' && hasNextMedia) {
-      // Prepare transition with random origin
       setNextImageUrl(currentMedia[mediaIndex + 1]?.url || null)
       setRippleOrigin(getRandomRippleOrigin())
       setIsTransitioning(true)
@@ -308,19 +328,18 @@ export default function PropertyExplorer() {
     }
   }, [hasNextMedia, hasPrevMedia, currentMedia, mediaIndex, getRandomRippleOrigin])
 
-  // Trigger ripple when entity changes
-  const prevContextRef = useRef(context)
-  useEffect(() => {
-    if (prevContextRef.current !== context && currentMedia.length > 0) {
-      setNextImageUrl(currentMedia[0]?.url || null)
-      setRippleOrigin(getRandomRippleOrigin())
-      setIsTransitioning(true)
-      setTimeout(() => {
-        setIsTransitioning(false)
-      }, 500)
-    }
-    prevContextRef.current = context
-  }, [context, currentMedia, getRandomRippleOrigin])
+  const navigateToImage = useCallback((index: number) => {
+    if (index === mediaIndex || index < 0 || index >= currentMedia.length) return
+
+    setNextImageUrl(currentMedia[index]?.url || null)
+    setRippleOrigin(getRandomRippleOrigin())
+    setIsTransitioning(true)
+
+    setTimeout(() => {
+      setMediaIndex(index)
+      setIsTransitioning(false)
+    }, 500)
+  }, [mediaIndex, currentMedia, getRandomRippleOrigin])
 
   const navigateSibling = useCallback((direction: 'next' | 'prev') => {
     setMediaIndex(0)
@@ -362,15 +381,92 @@ export default function PropertyExplorer() {
     }
   }, [context, dwellings, areas])
 
+  // Auto-hide UI
+  const resetUITimer = useCallback(() => {
+    setShowUI(true)
+    if (uiTimerRef.current) {
+      clearTimeout(uiTimerRef.current)
+    }
+    uiTimerRef.current = setTimeout(() => {
+      if (!isSearchOpen && !showInfo) {
+        setShowUI(false)
+        setShowFilmstrip(false)
+      }
+    }, 3000)
+  }, [isSearchOpen, showInfo])
+
+  // Toggle UI on tap/click
+  const handleBackgroundClick = useCallback(() => {
+    if (showUI) {
+      setShowUI(false)
+      setShowFilmstrip(false)
+    } else {
+      resetUITimer()
+    }
+  }, [showUI, resetUITimer])
+
+  // Touch/swipe handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }, [])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return
+
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current
+    const absX = Math.abs(deltaX)
+    const absY = Math.abs(deltaY)
+
+    // Only trigger swipe if horizontal movement is dominant and significant
+    if (absX > 50 && absX > absY * 1.5) {
+      if (deltaX > 0) {
+        navigateMedia('prev')
+      } else {
+        navigateMedia('next')
+      }
+    } else if (absY > 50 && absY > absX * 1.5) {
+      // Vertical swipe - show/hide filmstrip
+      if (deltaY < 0) {
+        setShowFilmstrip(true)
+        resetUITimer()
+      } else {
+        setShowFilmstrip(false)
+      }
+    }
+
+    touchStartX.current = null
+    touchStartY.current = null
+  }, [navigateMedia, resetUITimer])
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isSearchOpen) {
-        if (e.key === 'Escape') {
-          onSearchClose()
+        switch (e.key) {
+          case 'Escape':
+            onSearchClose()
+            setSearchQuery('')
+            break
+          case 'ArrowDown':
+            e.preventDefault()
+            setSelectedSearchIndex(i => Math.min(i + 1, filteredEntities.length - 1))
+            break
+          case 'ArrowUp':
+            e.preventDefault()
+            setSelectedSearchIndex(i => Math.max(i - 1, 0))
+            break
+          case 'Enter':
+            if (filteredEntities[selectedSearchIndex]) {
+              goToEntity(filteredEntities[selectedSearchIndex])
+            }
+            break
         }
         return
       }
+
+      resetUITimer()
 
       switch (e.key) {
         case 'ArrowRight':
@@ -380,6 +476,7 @@ export default function PropertyExplorer() {
           navigateMedia('prev')
           break
         case 'ArrowUp':
+          e.preventDefault()
           if (e.shiftKey) {
             goUp()
           } else {
@@ -387,100 +484,73 @@ export default function PropertyExplorer() {
           }
           break
         case 'ArrowDown':
-          if (e.shiftKey) {
-            // Could navigate into rooms
-          } else {
-            navigateSibling('next')
-          }
+          e.preventDefault()
+          navigateSibling('next')
           break
         case '/':
         case 'k':
-          if (e.ctrlKey || e.metaKey) {
+          if (e.key === '/' || e.ctrlKey || e.metaKey) {
             e.preventDefault()
             onSearchOpen()
           }
           break
+        case 'i':
+          setShowInfo(prev => !prev)
+          break
+        case 'f':
+          setShowFilmstrip(prev => !prev)
+          break
         case 'Escape':
-          navigate('/properties')
+          if (showInfo) {
+            setShowInfo(false)
+          } else if (showFilmstrip) {
+            setShowFilmstrip(false)
+          } else {
+            navigate('/properties')
+          }
           break
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isSearchOpen, onSearchClose, onSearchOpen, navigateMedia, navigateSibling, goUp, navigate])
+  }, [isSearchOpen, onSearchClose, onSearchOpen, navigateMedia, navigateSibling, goUp, navigate, resetUITimer, filteredEntities, selectedSearchIndex, goToEntity, showInfo, showFilmstrip])
 
-  // Auto-hide controls
+  // Mouse movement shows UI
   useEffect(() => {
-    const handleMouseMove = () => {
-      setShowControls(true)
-      if (controlsTimerRef.current) {
-        clearTimeout(controlsTimerRef.current)
-      }
-      controlsTimerRef.current = setTimeout(() => {
-        if (!isSearchOpen) {
-          setShowControls(false)
-        }
-      }, 3000)
-    }
-
+    const handleMouseMove = () => resetUITimer()
     window.addEventListener('mousemove', handleMouseMove)
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
-      if (controlsTimerRef.current) {
-        clearTimeout(controlsTimerRef.current)
-      }
+      if (uiTimerRef.current) clearTimeout(uiTimerRef.current)
     }
-  }, [isSearchOpen])
+  }, [resetUITimer])
 
-  // Focus search input when opened
+  // Focus search input
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
       searchInputRef.current.focus()
     }
   }, [isSearchOpen])
 
-  // Get context display name
-  const contextName = useMemo(() => {
-    switch (context.level) {
-      case 'dwelling':
-        return context.dwellingName
-      case 'room':
-        return `${context.dwellingName} > ${context.roomName}`
-      case 'area':
-        return context.areaName
-      default:
-        return property?.name
+  // Context breadcrumb
+  const breadcrumb = useMemo(() => {
+    const parts: string[] = [property?.name || '']
+    if (context.level === 'dwelling' || context.level === 'room') {
+      parts.push(context.dwellingName || '')
     }
-  }, [context, property])
-
-  // Check if can navigate siblings
-  const canNavigateSibling = useMemo(() => {
-    if (context.level === 'property') return { prev: false, next: false }
-
-    if (context.level === 'dwelling') {
-      const idx = dwellings.findIndex(d => d.id === context.dwellingId)
-      return { prev: idx > 0, next: idx < dwellings.length - 1 }
+    if (context.level === 'room') {
+      parts.push(context.roomName || '')
     }
-
-    if (context.level === 'room' && context.dwellingId) {
-      const dwelling = dwellings.find(d => d.id === context.dwellingId)
-      const rooms = dwelling?.rooms || []
-      const idx = rooms.findIndex(r => r.id === context.roomId)
-      return { prev: idx > 0, next: idx < rooms.length - 1 }
-    }
-
     if (context.level === 'area') {
-      const idx = areas.findIndex(a => a.id === context.areaId)
-      return { prev: idx > 0, next: idx < areas.length - 1 }
+      parts.push(context.areaName || '')
     }
-
-    return { prev: false, next: false }
-  }, [context, dwellings, areas])
+    return parts.filter(Boolean).join(' › ')
+  }, [context, property])
 
   if (propertyLoading) {
     return (
-      <Center minH="100vh" bg="black">
+      <Center position="fixed" inset={0} bg="black">
         <Spinner size="xl" color="white" />
       </Center>
     )
@@ -488,45 +558,52 @@ export default function PropertyExplorer() {
 
   if (!property) {
     return (
-      <Center minH="100vh" bg="black" color="white">
-        <Text>Property not found</Text>
+      <Center position="fixed" inset={0} bg="black" color="white">
+        <VStack spacing={4}>
+          <Text>Property not found</Text>
+          <Text fontSize="sm" color="whiteAlpha.600" cursor="pointer" onClick={() => navigate('/properties')}>
+            Return to properties
+          </Text>
+        </VStack>
       </Center>
     )
   }
 
   return (
-    <Box position="fixed" top={0} left={0} right={0} bottom={0} bg="black" overflow="hidden">
-      {/* Full-screen background image */}
+    <Box
+      position="fixed"
+      inset={0}
+      bg="black"
+      overflow="hidden"
+      cursor={showUI ? 'default' : 'none'}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Full-screen image */}
       {currentImage ? (
-        <>
+        <Box position="absolute" inset={0} onClick={handleBackgroundClick}>
           <Box
             as="img"
             src={currentImage.url}
             alt=""
             position="absolute"
-            top={0}
-            left={0}
+            inset={0}
             w="100%"
             h="100%"
             objectFit="contain"
-            bg="black"
           />
 
-          {/* Transition overlay */}
+          {/* Ripple transition */}
           {isTransitioning && nextImageUrl && (
             <Box
               position="absolute"
-              top={0}
-              left={0}
-              w="100%"
-              h="100%"
+              inset={0}
               overflow="hidden"
               sx={{
                 clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
-                animation: 'rippleExpand 0.5s ease-out forwards',
-                '@keyframes rippleExpand': {
-                  '0%': { clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)` },
-                  '100%': { clipPath: `circle(150% at ${rippleOrigin.x}% ${rippleOrigin.y}%)` },
+                animation: 'ripple 0.5s ease-out forwards',
+                '@keyframes ripple': {
+                  to: { clipPath: `circle(150% at ${rippleOrigin.x}% ${rippleOrigin.y}%)` },
                 },
               }}
             >
@@ -535,251 +612,366 @@ export default function PropertyExplorer() {
                 src={nextImageUrl}
                 alt=""
                 position="absolute"
-                top={0}
-                left={0}
+                inset={0}
                 w="100%"
                 h="100%"
                 objectFit="contain"
-                bg="black"
               />
             </Box>
           )}
-        </>
+        </Box>
       ) : (
-        <Center h="100%" color="whiteAlpha.600">
+        <Center position="absolute" inset={0} color="whiteAlpha.400" onClick={handleBackgroundClick}>
           <VStack spacing={4}>
-            <FiImage size={64} />
-            <Text>No images for this {context.level}</Text>
-            <Text fontSize="sm">Navigate to another section or upload images</Text>
+            <FiImage size={80} />
+            <Text fontSize="lg">No images</Text>
+            <Text fontSize="sm">Press / to navigate to another section</Text>
           </VStack>
         </Center>
       )}
 
       {/* Starred indicator */}
-      {currentImage?.starred && (
-        <Box position="absolute" top={4} right={4} color="yellow.400">
-          <FiStar size={24} fill="currentColor" />
+      {currentImage?.starred && showUI && (
+        <Box
+          position="absolute"
+          top={4}
+          right={4}
+          color="yellow.400"
+          opacity={0.8}
+          transition="opacity 0.3s"
+        >
+          <FiStar size={20} fill="currentColor" />
         </Box>
       )}
 
-      {/* Navigation Controls - Bottom Panel */}
-      <Fade in={showControls}>
-        <Box
-          position="absolute"
-          bottom={0}
-          left={0}
-          right={0}
-          bg={controlsBg}
-          backdropFilter="blur(10px)"
-          py={3}
-          px={4}
-        >
-          <HStack justify="space-between" maxW="container.xl" mx="auto">
-            {/* Left: Context breadcrumb */}
-            <HStack spacing={2} flex={1}>
-              <Tooltip label="Back to property list (Esc)">
-                <IconButton
-                  aria-label="Exit"
-                  icon={<FiX />}
-                  variant="ghost"
-                  colorScheme="whiteAlpha"
-                  size="sm"
-                  onClick={() => navigate('/properties')}
-                />
-              </Tooltip>
-
-              {context.level !== 'property' && (
-                <Tooltip label="Go up (Shift+Up)">
-                  <IconButton
-                    aria-label="Go up"
-                    icon={<FiChevronUp />}
-                    variant="ghost"
-                    colorScheme="whiteAlpha"
-                    size="sm"
-                    onClick={goUp}
-                  />
-                </Tooltip>
-              )}
-
-              <Text color="white" fontSize="sm" fontWeight="medium" noOfLines={1}>
-                {contextName}
-              </Text>
-
-              <Badge
-                colorScheme={context.level === 'property' ? 'blue' : context.level === 'area' ? 'green' : 'purple'}
-                fontSize="xs"
-              >
-                {context.level}
-              </Badge>
-            </HStack>
-
-            {/* Center: Media navigation */}
-            <HStack spacing={1}>
-              <Tooltip label="Previous image (Left arrow)">
-                <IconButton
-                  aria-label="Previous image"
-                  icon={<FiChevronLeft />}
-                  variant="ghost"
-                  colorScheme="whiteAlpha"
-                  size="sm"
-                  isDisabled={!hasPrevMedia}
-                  onClick={() => navigateMedia('prev')}
-                />
-              </Tooltip>
-
-              <Text color="whiteAlpha.800" fontSize="sm" minW="60px" textAlign="center">
-                {currentMedia.length > 0 ? `${mediaIndex + 1} / ${currentMedia.length}` : '0 / 0'}
-              </Text>
-
-              <Tooltip label="Next image (Right arrow)">
-                <IconButton
-                  aria-label="Next image"
-                  icon={<FiChevronRight />}
-                  variant="ghost"
-                  colorScheme="whiteAlpha"
-                  size="sm"
-                  isDisabled={!hasNextMedia}
-                  onClick={() => navigateMedia('next')}
-                />
-              </Tooltip>
-            </HStack>
-
-            {/* Right: Entity navigation + Search */}
-            <HStack spacing={2} flex={1} justify="flex-end">
-              {context.level !== 'property' && (
-                <>
-                  <Tooltip label={`Previous ${context.level} (Up arrow)`}>
-                    <IconButton
-                      aria-label={`Previous ${context.level}`}
-                      icon={<FiChevronUp />}
-                      variant="ghost"
-                      colorScheme="whiteAlpha"
-                      size="sm"
-                      isDisabled={!canNavigateSibling.prev}
-                      onClick={() => navigateSibling('prev')}
-                    />
-                  </Tooltip>
-
-                  <Tooltip label={`Next ${context.level} (Down arrow)`}>
-                    <IconButton
-                      aria-label={`Next ${context.level}`}
-                      icon={<FiChevronUp style={{ transform: 'rotate(180deg)' }} />}
-                      variant="ghost"
-                      colorScheme="whiteAlpha"
-                      size="sm"
-                      isDisabled={!canNavigateSibling.next}
-                      onClick={() => navigateSibling('next')}
-                    />
-                  </Tooltip>
-                </>
-              )}
-
-              <Tooltip label="Quick jump (Ctrl+K)">
-                <IconButton
-                  aria-label="Quick jump"
-                  icon={<FiSearch />}
-                  variant="ghost"
-                  colorScheme="whiteAlpha"
-                  size="sm"
-                  onClick={onSearchOpen}
-                />
-              </Tooltip>
-            </HStack>
+      {/* Minimal top info bar */}
+      <Box
+        position="absolute"
+        top={0}
+        left={0}
+        right={0}
+        p={4}
+        bgGradient="linear(to-b, blackAlpha.600, transparent)"
+        opacity={showUI ? 1 : 0}
+        transform={showUI ? 'translateY(0)' : 'translateY(-100%)'}
+        transition="all 0.3s ease-out"
+        pointerEvents={showUI ? 'auto' : 'none'}
+      >
+        <HStack justify="space-between">
+          <HStack spacing={3}>
+            <Tooltip label="Exit (Esc)">
+              <IconButton
+                aria-label="Exit"
+                icon={<FiX />}
+                variant="ghost"
+                colorScheme="whiteAlpha"
+                size="sm"
+                onClick={() => navigate('/properties')}
+              />
+            </Tooltip>
+            <Text color="white" fontSize="sm" fontWeight="medium" opacity={0.9}>
+              {breadcrumb}
+            </Text>
           </HStack>
-        </Box>
-      </Fade>
 
-      {/* Quick Jump Search Panel */}
-      {isSearchOpen && (
+          <HStack spacing={2}>
+            <Tooltip label="Info (i)">
+              <IconButton
+                aria-label="Info"
+                icon={<FiInfo />}
+                variant="ghost"
+                colorScheme="whiteAlpha"
+                size="sm"
+                onClick={() => setShowInfo(prev => !prev)}
+              />
+            </Tooltip>
+            <Tooltip label="Search (/)">
+              <IconButton
+                aria-label="Search"
+                icon={<FiSearch />}
+                variant="ghost"
+                colorScheme="whiteAlpha"
+                size="sm"
+                onClick={onSearchOpen}
+              />
+            </Tooltip>
+          </HStack>
+        </HStack>
+      </Box>
+
+      {/* Navigation arrows - edges of screen */}
+      {showUI && currentMedia.length > 1 && (
+        <>
+          <Center
+            position="absolute"
+            left={0}
+            top="50%"
+            transform="translateY(-50%)"
+            h="200px"
+            w="80px"
+            cursor={hasPrevMedia ? 'pointer' : 'default'}
+            opacity={hasPrevMedia ? 0.6 : 0.2}
+            _hover={{ opacity: hasPrevMedia ? 1 : 0.2 }}
+            transition="opacity 0.2s"
+            onClick={(e) => { e.stopPropagation(); navigateMedia('prev'); }}
+          >
+            <FiChevronLeft size={48} color="white" />
+          </Center>
+
+          <Center
+            position="absolute"
+            right={0}
+            top="50%"
+            transform="translateY(-50%)"
+            h="200px"
+            w="80px"
+            cursor={hasNextMedia ? 'pointer' : 'default'}
+            opacity={hasNextMedia ? 0.6 : 0.2}
+            _hover={{ opacity: hasNextMedia ? 1 : 0.2 }}
+            transition="opacity 0.2s"
+            onClick={(e) => { e.stopPropagation(); navigateMedia('next'); }}
+          >
+            <FiChevronRight size={48} color="white" />
+          </Center>
+        </>
+      )}
+
+      {/* Bottom counter - always minimal */}
+      {currentMedia.length > 0 && (
         <Box
           position="absolute"
-          top={0}
+          bottom={showFilmstrip ? '140px' : 4}
+          left="50%"
+          transform="translateX(-50%)"
+          bg="blackAlpha.600"
+          px={3}
+          py={1}
+          borderRadius="full"
+          opacity={showUI ? 0.9 : 0.4}
+          transition="all 0.3s"
+        >
+          <Text color="white" fontSize="sm" fontWeight="medium">
+            {mediaIndex + 1} / {currentMedia.length}
+          </Text>
+        </Box>
+      )}
+
+      {/* Filmstrip - swipe up or press 'f' */}
+      <Box
+        position="absolute"
+        bottom={0}
+        left={0}
+        right={0}
+        bg="blackAlpha.800"
+        backdropFilter="blur(10px)"
+        py={3}
+        px={4}
+        transform={showFilmstrip ? 'translateY(0)' : 'translateY(100%)'}
+        transition="transform 0.3s ease-out"
+      >
+        <Flex
+          gap={2}
+          overflowX="auto"
+          pb={2}
+          sx={{
+            '&::-webkit-scrollbar': { height: '4px' },
+            '&::-webkit-scrollbar-thumb': { bg: 'whiteAlpha.300', borderRadius: 'full' },
+          }}
+        >
+          {currentMedia.map((img, idx) => (
+            <Box
+              key={img.id}
+              flexShrink={0}
+              w="100px"
+              h="70px"
+              borderRadius="md"
+              overflow="hidden"
+              border="2px solid"
+              borderColor={idx === mediaIndex ? 'white' : 'transparent'}
+              opacity={idx === mediaIndex ? 1 : 0.6}
+              cursor="pointer"
+              transition="all 0.2s"
+              _hover={{ opacity: 1, borderColor: 'whiteAlpha.500' }}
+              onClick={() => navigateToImage(idx)}
+            >
+              <Image
+                src={img.url}
+                alt=""
+                w="100%"
+                h="100%"
+                objectFit="cover"
+              />
+              {img.starred && (
+                <Box position="absolute" top={1} left={1} color="yellow.400">
+                  <FiStar size={12} fill="currentColor" />
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Flex>
+      </Box>
+
+      {/* Info panel overlay */}
+      {showInfo && property && (
+        <Box
+          position="absolute"
+          bottom={0}
           left={0}
           right={0}
-          bottom={0}
+          bg="blackAlpha.900"
+          backdropFilter="blur(20px)"
+          p={6}
+          maxH="50vh"
+          overflowY="auto"
+        >
+          <VStack align="start" spacing={4}>
+            <HStack justify="space-between" w="100%">
+              <Text color="white" fontSize="xl" fontWeight="bold">{property.name}</Text>
+              <IconButton
+                aria-label="Close"
+                icon={<FiX />}
+                variant="ghost"
+                colorScheme="whiteAlpha"
+                size="sm"
+                onClick={() => setShowInfo(false)}
+              />
+            </HStack>
+
+            <Text color="whiteAlpha.800" fontSize="lg">
+              {property.currency} {property.price_min?.toLocaleString()}
+              {property.price_max && property.price_max !== property.price_min && (
+                <Text as="span" color="whiteAlpha.600"> - {property.price_max.toLocaleString()}</Text>
+              )}
+            </Text>
+
+            <Text color="whiteAlpha.700" fontSize="sm">
+              {property.city}, {property.country}
+            </Text>
+
+            {property.description && (
+              <Text color="whiteAlpha.600" fontSize="sm" whiteSpace="pre-wrap">
+                {property.description}
+              </Text>
+            )}
+
+            <HStack spacing={4} pt={2}>
+              <VStack align="start" spacing={0}>
+                <Text color="whiteAlpha.500" fontSize="xs">Dwellings</Text>
+                <Text color="white" fontSize="lg" fontWeight="bold">{dwellings.length}</Text>
+              </VStack>
+              <VStack align="start" spacing={0}>
+                <Text color="whiteAlpha.500" fontSize="xs">Areas</Text>
+                <Text color="white" fontSize="lg" fontWeight="bold">{areas.length}</Text>
+              </VStack>
+              <VStack align="start" spacing={0}>
+                <Text color="whiteAlpha.500" fontSize="xs">Photos</Text>
+                <Text color="white" fontSize="lg" fontWeight="bold">{allMedia.filter(m => m.type === 'image').length}</Text>
+              </VStack>
+            </HStack>
+          </VStack>
+        </Box>
+      )}
+
+      {/* Quick Jump Search */}
+      {isSearchOpen && (
+        <Center
+          position="absolute"
+          inset={0}
           bg="blackAlpha.800"
           backdropFilter="blur(8px)"
           onClick={onSearchClose}
         >
-          <Center h="100%" onClick={(e) => e.stopPropagation()}>
-            <Box
-              bg="gray.800"
-              borderRadius="xl"
-              w="100%"
-              maxW="500px"
-              maxH="70vh"
-              overflow="hidden"
-              shadow="2xl"
-            >
-              {/* Search Input */}
-              <Box p={4} borderBottomWidth="1px" borderColor="gray.700">
-                <InputGroup size="lg">
-                  <InputLeftElement pointerEvents="none">
-                    <FiSearch color="gray" />
-                  </InputLeftElement>
-                  <Input
-                    ref={searchInputRef}
-                    placeholder="Jump to..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    bg="gray.900"
-                    border="none"
-                    color="white"
-                    _placeholder={{ color: 'gray.500' }}
-                    _focus={{ boxShadow: 'none' }}
-                  />
-                </InputGroup>
-                <HStack mt={2} spacing={2}>
-                  <Kbd>Enter</Kbd>
-                  <Text fontSize="xs" color="gray.500">to select</Text>
-                  <Kbd>Esc</Kbd>
-                  <Text fontSize="xs" color="gray.500">to close</Text>
-                </HStack>
-              </Box>
+          <Box
+            bg="gray.900"
+            borderRadius="xl"
+            w="100%"
+            maxW="450px"
+            mx={4}
+            overflow="hidden"
+            shadow="2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Box p={4} borderBottomWidth="1px" borderColor="gray.700">
+              <InputGroup size="lg">
+                <InputLeftElement pointerEvents="none">
+                  <FiSearch color="gray" />
+                </InputLeftElement>
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Jump to..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  bg="gray.800"
+                  border="none"
+                  color="white"
+                  _placeholder={{ color: 'gray.500' }}
+                  _focus={{ boxShadow: 'none', bg: 'gray.800' }}
+                />
+              </InputGroup>
+              <HStack mt={2} spacing={4} color="gray.500" fontSize="xs">
+                <HStack><Kbd>↑↓</Kbd><Text>navigate</Text></HStack>
+                <HStack><Kbd>Enter</Kbd><Text>select</Text></HStack>
+                <HStack><Kbd>Esc</Kbd><Text>close</Text></HStack>
+              </HStack>
+            </Box>
 
-              {/* Results */}
-              <Box maxH="50vh" overflowY="auto" p={2}>
-                {filteredEntities.map((entity, idx) => (
-                  <HStack
-                    key={entity.id}
-                    p={3}
-                    borderRadius="md"
-                    cursor="pointer"
-                    bg={idx === 0 ? 'blue.600' : 'transparent'}
-                    _hover={{ bg: idx === 0 ? 'blue.500' : 'gray.700' }}
-                    onClick={() => goToEntity(entity)}
-                    spacing={3}
-                  >
+            <Box maxH="300px" overflowY="auto">
+              {filteredEntities.map((entity, idx) => (
+                <HStack
+                  key={entity.id}
+                  p={3}
+                  cursor="pointer"
+                  bg={idx === selectedSearchIndex ? 'blue.600' : 'transparent'}
+                  _hover={{ bg: idx === selectedSearchIndex ? 'blue.500' : 'gray.800' }}
+                  onClick={() => goToEntity(entity)}
+                  spacing={3}
+                >
+                  <Box color={idx === selectedSearchIndex ? 'white' : 'gray.400'}>
                     {entity.type === 'property' && <FiHome />}
                     {entity.type === 'dwelling' && <FiLayers />}
                     {entity.type === 'room' && <FiGrid />}
-                    {entity.type === 'area' && <FiGrid color="green" />}
+                    {entity.type === 'area' && <FiMaximize />}
+                  </Box>
 
-                    <VStack align="start" spacing={0} flex={1}>
-                      <Text color="white" fontWeight="medium">
-                        {entity.name}
-                      </Text>
-                      <Text fontSize="xs" color="gray.400" textTransform="capitalize">
-                        {entity.type}
-                      </Text>
-                    </VStack>
+                  <VStack align="start" spacing={0} flex={1}>
+                    <Text color="white" fontSize="sm" fontWeight="medium">
+                      {entity.name}
+                    </Text>
+                    <Text fontSize="xs" color={idx === selectedSearchIndex ? 'blue.200' : 'gray.500'}>
+                      {entity.type} • {entity.mediaCount} photos
+                    </Text>
+                  </VStack>
+                </HStack>
+              ))}
 
-                    <Badge colorScheme="blue" fontSize="xs">
-                      {entity.mediaCount} images
-                    </Badge>
-                  </HStack>
-                ))}
-
-                {filteredEntities.length === 0 && (
-                  <Text color="gray.500" textAlign="center" py={8}>
-                    No matches found
-                  </Text>
-                )}
-              </Box>
+              {filteredEntities.length === 0 && (
+                <Text color="gray.500" textAlign="center" py={8} fontSize="sm">
+                  No matches
+                </Text>
+              )}
             </Box>
-          </Center>
-        </Box>
+          </Box>
+        </Center>
       )}
+
+      {/* Keyboard hints - show briefly on first load */}
+      <Box
+        position="absolute"
+        bottom={4}
+        right={4}
+        color="whiteAlpha.400"
+        fontSize="xs"
+        opacity={showUI ? 1 : 0}
+        transition="opacity 0.3s"
+        pointerEvents="none"
+      >
+        <VStack align="end" spacing={0}>
+          <Text>← → navigate</Text>
+          <Text>/ search</Text>
+          <Text>f filmstrip</Text>
+          <Text>i info</Text>
+        </VStack>
+      </Box>
     </Box>
   )
 }
