@@ -60,6 +60,7 @@ export default function PropertyPage() {
   const [slideshowIndex, setSlideshowIndex] = useState(0)
   const [manualBackground, setManualBackground] = useState<string | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [transitioningToImage, setTransitioningToImage] = useState<string | null>(null)
   const [rippleOrigin, setRippleOrigin] = useState({ x: 50, y: 50 })
 
   const cardBg = useColorModeValue('whiteAlpha.900', 'blackAlpha.800')
@@ -143,12 +144,6 @@ export default function PropertyPage() {
     return starredImages[slideshowIndex % starredImages.length]?.url || null
   }, [manualBackground, starredImages, slideshowIndex])
 
-  const nextBackgroundImage = useMemo(() => {
-    if (manualBackground || starredImages.length <= 1) {
-      return null
-    }
-    return starredImages[(slideshowIndex + 1) % starredImages.length]?.url || null
-  }, [manualBackground, starredImages, slideshowIndex])
 
   // Slideshow timer - change every 8 seconds when multiple starred images
   useEffect(() => {
@@ -157,22 +152,28 @@ export default function PropertyPage() {
     }
 
     const timer = setInterval(() => {
-      setIsTransitioning(true)
-      // Random ripple origin for organic feel
-      setRippleOrigin({
-        x: 20 + Math.random() * 60,
-        y: 20 + Math.random() * 60,
-      })
+      const nextIndex = (slideshowIndex + 1) % starredImages.length
+      const nextImage = starredImages[nextIndex]?.url
+      if (nextImage) {
+        setTransitioningToImage(nextImage)
+        setIsTransitioning(true)
+        // Random ripple origin for organic feel
+        setRippleOrigin({
+          x: 20 + Math.random() * 60,
+          y: 20 + Math.random() * 60,
+        })
 
-      // After transition animation (1.5s), change to next image
-      setTimeout(() => {
-        setSlideshowIndex((prev) => (prev + 1) % starredImages.length)
-        setIsTransitioning(false)
-      }, 1500)
+        // After transition animation (1.5s), change to next image
+        setTimeout(() => {
+          setSlideshowIndex(nextIndex)
+          setIsTransitioning(false)
+          setTransitioningToImage(null)
+        }, 1500)
+      }
     }, 8000)
 
     return () => clearInterval(timer)
-  }, [manualBackground, starredImages.length])
+  }, [manualBackground, starredImages, slideshowIndex])
 
   // Reset slideshow when entity changes
   useEffect(() => {
@@ -183,17 +184,23 @@ export default function PropertyPage() {
 
   // Handle clicking an image to set it as background
   const handleImageClick = useCallback((imageUrl: string, event: React.MouseEvent) => {
+    // Don't transition to the same image
+    if (imageUrl === currentBackgroundImage) return
+
     const rect = event.currentTarget.getBoundingClientRect()
     const x = ((event.clientX - rect.left) / rect.width) * 100
     const y = ((event.clientY - rect.top) / rect.height) * 100
+
+    setTransitioningToImage(imageUrl)
     setRippleOrigin({ x, y })
     setIsTransitioning(true)
 
     setTimeout(() => {
       setManualBackground(imageUrl)
       setIsTransitioning(false)
+      setTransitioningToImage(null)
     }, 1500)
-  }, [])
+  }, [currentBackgroundImage])
 
   // Create map markers from dwellings and areas
   const mapMarkers = useMemo(() => {
@@ -327,8 +334,8 @@ export default function PropertyPage() {
               objectFit="cover"
             />
 
-            {/* Next image with ripple reveal effect */}
-            {nextBackgroundImage && isTransitioning && (
+            {/* Ripple transition to new image */}
+            {transitioningToImage && isTransitioning && (
               <Box
                 position="absolute"
                 top={0}
@@ -351,43 +358,7 @@ export default function PropertyPage() {
               >
                 <Box
                   as="img"
-                  src={nextBackgroundImage}
-                  alt=""
-                  position="absolute"
-                  top={0}
-                  left={0}
-                  w="100%"
-                  h="100%"
-                  objectFit="cover"
-                />
-              </Box>
-            )}
-
-            {/* Manual selection ripple effect */}
-            {manualBackground && isTransitioning && (
-              <Box
-                position="absolute"
-                top={0}
-                left={0}
-                w="100%"
-                h="100%"
-                overflow="hidden"
-                sx={{
-                  clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
-                  animation: 'rippleExpand 1.5s ease-out forwards',
-                  '@keyframes rippleExpand': {
-                    '0%': {
-                      clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
-                    },
-                    '100%': {
-                      clipPath: `circle(150% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
-                    },
-                  },
-                }}
-              >
-                <Box
-                  as="img"
-                  src={manualBackground}
+                  src={transitioningToImage}
                   alt=""
                   position="absolute"
                   top={0}

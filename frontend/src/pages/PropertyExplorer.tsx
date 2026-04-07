@@ -302,6 +302,20 @@ export default function PropertyExplorer() {
     }
   }, [hasNextMedia, hasPrevMedia, currentMedia, mediaIndex])
 
+  // Trigger ripple when entity changes
+  const prevContextRef = useRef(context)
+  useEffect(() => {
+    if (prevContextRef.current !== context && currentMedia.length > 0) {
+      setNextImageUrl(currentMedia[0]?.url || null)
+      setRippleOrigin({ x: 50, y: 50 })
+      setIsTransitioning(true)
+      setTimeout(() => {
+        setIsTransitioning(false)
+      }, 500)
+    }
+    prevContextRef.current = context
+  }, [context, currentMedia])
+
   const navigateSibling = useCallback((direction: 'next' | 'prev') => {
     setMediaIndex(0)
 
