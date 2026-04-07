@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom'
 import {
   Box,
   HStack,
@@ -19,6 +19,7 @@ import {
   Tooltip,
   Image,
   Flex,
+  Button,
 } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -781,6 +782,7 @@ export default function PropertyExplorer() {
           {currentMedia.map((img, idx) => (
             <Box
               key={img.id}
+              position="relative"
               flexShrink={0}
               w="100px"
               h="70px"
@@ -868,6 +870,17 @@ export default function PropertyExplorer() {
                 <Text color="white" fontSize="lg" fontWeight="bold">{allMedia.filter(m => m.type === 'image').length}</Text>
               </VStack>
             </HStack>
+
+            <Button
+              as={RouterLink}
+              to={`/property/${slug}`}
+              size="sm"
+              colorScheme="whiteAlpha"
+              variant="outline"
+              mt={4}
+            >
+              View Full Details
+            </Button>
           </VStack>
         </Box>
       )}
