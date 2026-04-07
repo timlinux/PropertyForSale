@@ -14,8 +14,12 @@ import {
   Image,
   Badge,
   Flex,
+  HStack,
+  Icon,
+  Button,
 } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
+import { FiMaximize, FiInfo } from 'react-icons/fi'
 import { api, Property } from '../api'
 
 export default function PropertiesPage() {
@@ -86,13 +90,13 @@ interface PropertyCardProps {
 function PropertyCard({ property }: PropertyCardProps) {
   return (
     <Box
-      as={RouterLink}
-      to={`/property/${property.slug}`}
       display="block"
       borderRadius="2xl"
       overflow="hidden"
       bg="white"
+      position="relative"
       transition="all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)"
+      role="group"
       _hover={{
         transform: 'scale(1.02)',
         '& .property-image': {
@@ -100,13 +104,17 @@ function PropertyCard({ property }: PropertyCardProps) {
         },
       }}
     >
-      {/* Image container */}
+      {/* Clickable image container - links to explorer */}
       <Box
+        as={RouterLink}
+        to={`/explore/${property.slug}`}
+        display="block"
         h={{ base: '240px', md: '280px' }}
         bg="neutral.100"
         position="relative"
         overflow="hidden"
         borderRadius="2xl"
+        cursor="pointer"
       >
         <Image
           className="property-image"
@@ -117,6 +125,39 @@ function PropertyCard({ property }: PropertyCardProps) {
           h="full"
           transition="transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)"
         />
+
+        {/* Hover overlay with action buttons */}
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg="blackAlpha.600"
+          opacity={0}
+          _groupHover={{ opacity: 1 }}
+          transition="opacity 0.3s"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <VStack spacing={3}>
+            <HStack
+              bg="white"
+              color="neutral.800"
+              px={4}
+              py={2}
+              borderRadius="full"
+              fontWeight="600"
+              fontSize="14px"
+              boxShadow="lg"
+            >
+              <Icon as={FiMaximize} />
+              <Text>Explore</Text>
+            </HStack>
+          </VStack>
+        </Box>
+
         {property.status !== 'published' && (
           <Badge
             position="absolute"
@@ -129,6 +170,7 @@ function PropertyCard({ property }: PropertyCardProps) {
             px={3}
             py={1}
             borderRadius="full"
+            zIndex={1}
           >
             {property.status}
           </Badge>
@@ -137,9 +179,24 @@ function PropertyCard({ property }: PropertyCardProps) {
 
       {/* Content - clean, minimal */}
       <VStack p={4} align="stretch" spacing={1}>
-        <Text fontSize="17px" fontWeight="600" color="neutral.800" noOfLines={1}>
-          {property.name}
-        </Text>
+        <Flex justify="space-between" align="center">
+          <Text fontSize="17px" fontWeight="600" color="neutral.800" noOfLines={1}>
+            {property.name}
+          </Text>
+          <Button
+            as={RouterLink}
+            to={`/property/${property.slug}`}
+            size="xs"
+            variant="ghost"
+            color="neutral.400"
+            leftIcon={<Icon as={FiInfo} />}
+            opacity={0}
+            _groupHover={{ opacity: 1 }}
+            transition="opacity 0.3s"
+          >
+            Details
+          </Button>
+        </Flex>
         <Text color="neutral.400" fontSize="14px" noOfLines={1}>
           {property.city}{property.city && property.country ? ', ' : ''}{property.country}
         </Text>
