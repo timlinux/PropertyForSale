@@ -308,7 +308,7 @@ export default function PropertyPage() {
         <AmbientAudioPlayer audioTracks={audioTracks} autoplay />
       )}
 
-      {/* Fixed Full-Page Background Image with Ripple Transition */}
+      {/* Fixed Full-Page Background Image with Ken Burns Effect */}
       <Box
         position="fixed"
         top={0}
@@ -321,17 +321,38 @@ export default function PropertyPage() {
       >
         {currentBackgroundImage ? (
           <>
-            {/* Current background image */}
+            {/* Current background image with Ken Burns effect */}
             <Box
+              key={currentBackgroundImage}
               as="img"
               src={currentBackgroundImage}
               alt=""
               position="absolute"
-              top={0}
-              left={0}
-              w="100%"
-              h="100%"
+              top="50%"
+              left="50%"
+              minW="100%"
+              minH="100%"
+              w="auto"
+              h="auto"
               objectFit="cover"
+              sx={{
+                transform: 'translate(-50%, -50%) scale(1.15)',
+                animation: 'kenburns 25s ease-in-out infinite alternate',
+                '@keyframes kenburns': {
+                  '0%': {
+                    transform: 'translate(-50%, -50%) scale(1.15)',
+                    objectPosition: '30% 30%',
+                  },
+                  '50%': {
+                    transform: 'translate(-50%, -50%) scale(1.25)',
+                    objectPosition: '70% 50%',
+                  },
+                  '100%': {
+                    transform: 'translate(-50%, -50%) scale(1.15)',
+                    objectPosition: '50% 70%',
+                  },
+                },
+              }}
             />
 
             {/* Ripple transition to new image */}
@@ -361,11 +382,16 @@ export default function PropertyPage() {
                   src={transitioningToImage}
                   alt=""
                   position="absolute"
-                  top={0}
-                  left={0}
-                  w="100%"
-                  h="100%"
+                  top="50%"
+                  left="50%"
+                  minW="100%"
+                  minH="100%"
+                  w="auto"
+                  h="auto"
                   objectFit="cover"
+                  sx={{
+                    transform: 'translate(-50%, -50%) scale(1.15)',
+                  }}
                 />
               </Box>
             )}

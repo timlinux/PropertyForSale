@@ -580,18 +580,40 @@ export default function PropertyExplorer() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Full-screen image */}
+      {/* Full-screen image with Ken Burns effect */}
       {currentImage ? (
-        <Box position="absolute" inset={0} onClick={handleBackgroundClick}>
+        <Box position="absolute" inset={0} overflow="hidden" onClick={handleBackgroundClick}>
           <Box
+            key={currentImage.url}
             as="img"
             src={currentImage.url}
             alt=""
             position="absolute"
-            inset={0}
-            w="100%"
-            h="100%"
-            objectFit="contain"
+            top="50%"
+            left="50%"
+            minW="100%"
+            minH="100%"
+            w="auto"
+            h="auto"
+            objectFit="cover"
+            sx={{
+              transform: 'translate(-50%, -50%) scale(1.15)',
+              animation: 'kenburns 20s ease-in-out infinite alternate',
+              '@keyframes kenburns': {
+                '0%': {
+                  transform: 'translate(-50%, -50%) scale(1.15)',
+                  objectPosition: '30% 30%',
+                },
+                '50%': {
+                  transform: 'translate(-50%, -50%) scale(1.25)',
+                  objectPosition: '70% 50%',
+                },
+                '100%': {
+                  transform: 'translate(-50%, -50%) scale(1.15)',
+                  objectPosition: '50% 70%',
+                },
+              },
+            }}
           />
 
           {/* Ripple transition */}
@@ -613,10 +635,16 @@ export default function PropertyExplorer() {
                 src={nextImageUrl}
                 alt=""
                 position="absolute"
-                inset={0}
-                w="100%"
-                h="100%"
-                objectFit="contain"
+                top="50%"
+                left="50%"
+                minW="100%"
+                minH="100%"
+                w="auto"
+                h="auto"
+                objectFit="cover"
+                sx={{
+                  transform: 'translate(-50%, -50%) scale(1.15)',
+                }}
               />
             </Box>
           )}
