@@ -88,6 +88,7 @@ export interface Media {
   file_size: number
   mime_type: string
   autoplay: boolean
+  starred: boolean
   sort_order: number
   created_at: string
   updated_at: string
@@ -433,10 +434,16 @@ export const api = {
       return res.json() as Promise<Media>
     }),
 
-  updateMedia: (id: string, data: { autoplay?: boolean; sort_order?: number }) =>
+  updateMedia: (id: string, data: { autoplay?: boolean; starred?: boolean; sort_order?: number }) =>
     fetchAPI<Media>(`/media/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  toggleMediaStar: (id: string) =>
+    fetchAPI<Media>(`/media/${id}/star`, {
+      method: 'POST',
       requireAuth: true,
     }),
 

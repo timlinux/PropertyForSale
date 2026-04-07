@@ -156,6 +156,7 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 			media.GET("/:id", handlers.Media.Get)
 			media.PUT("/:id", handlers.Media.Update)
 			media.DELETE("/:id", handlers.Media.Delete)
+			media.POST("/:id/star", handlers.Media.ToggleStar)
 		}
 
 		// Serve media files

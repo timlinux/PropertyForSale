@@ -406,6 +406,7 @@ func runMigrations(db *gorm.DB) error {
 		`ALTER TABLE media ADD COLUMN width INTEGER DEFAULT 0`,
 		`ALTER TABLE media ADD COLUMN height INTEGER DEFAULT 0`,
 		`ALTER TABLE media ADD COLUMN duration REAL DEFAULT 0`,
+		`ALTER TABLE media ADD COLUMN starred INTEGER DEFAULT 0`,
 	}
 
 	for _, update := range schemaUpdates {

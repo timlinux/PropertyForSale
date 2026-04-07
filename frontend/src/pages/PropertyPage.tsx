@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Tim Sutton <tim@kartoza.com>
 // SPDX-License-Identifier: EUPL-1.2
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useParams, Link as RouterLink } from 'react-router-dom'
 import {
   Box,
@@ -42,6 +42,7 @@ import {
   FiCalendar,
   FiSquare,
   FiX,
+  FiStar,
 } from 'react-icons/fi'
 import { api, type Dwelling, type Area, type Media } from '../api'
 import PropertyMap from '../components/map/PropertyMap'
@@ -56,6 +57,10 @@ export default function PropertyPage() {
     id: string
     name: string
   } | null>(null)
+  const [slideshowIndex, setSlideshowIndex] = useState(0)
+  const [manualBackground, setManualBackground] = useState<string | null>(null)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [rippleOrigin, setRippleOrigin] = useState({ x: 50, y: 50 })
 
   const cardBg = useColorModeValue('whiteAlpha.900', 'blackAlpha.800')
   const cardBorder = useColorModeValue('whiteAlpha.300', 'whiteAlpha.200')
@@ -106,21 +111,89 @@ export default function PropertyPage() {
     return allMedia.filter((m) => m.entity_type === entityType && m.entity_id === entityId)
   }
 
-  // Get background image based on selected entity
-  const backgroundImage = useMemo(() => {
+  // Get starred images for slideshow based on current context
+  const starredImages = useMemo(() => {
+    let images: Media[] = []
     if (selectedEntity) {
       const entityMedia = getEntityMedia(selectedEntity.type, selectedEntity.id)
-      const images = entityMedia.filter((m) => m.type === 'image')
-      if (images.length > 0) {
-        return images[0].url
+      images = entityMedia.filter((m) => m.type === 'image' && m.starred)
+      // If no starred images in entity, use all entity images
+      if (images.length === 0) {
+        images = entityMedia.filter((m) => m.type === 'image')
+      }
+    } else {
+      // For property, use starred property images
+      images = propertyImages.filter((m) => m.starred)
+      // If no starred images, use all property images
+      if (images.length === 0) {
+        images = propertyImages
       }
     }
-    // Default to property's first image
-    if (propertyImages.length > 0) {
-      return propertyImages[0].url
-    }
-    return null
+    return images
   }, [selectedEntity, propertyImages, allMedia])
+
+  // Get current and next background images for transition
+  const currentBackgroundImage = useMemo(() => {
+    if (manualBackground) {
+      return manualBackground
+    }
+    if (starredImages.length === 0) {
+      return null
+    }
+    return starredImages[slideshowIndex % starredImages.length]?.url || null
+  }, [manualBackground, starredImages, slideshowIndex])
+
+  const nextBackgroundImage = useMemo(() => {
+    if (manualBackground || starredImages.length <= 1) {
+      return null
+    }
+    return starredImages[(slideshowIndex + 1) % starredImages.length]?.url || null
+  }, [manualBackground, starredImages, slideshowIndex])
+
+  // Slideshow timer - change every 8 seconds when multiple starred images
+  useEffect(() => {
+    if (manualBackground || starredImages.length <= 1) {
+      return
+    }
+
+    const timer = setInterval(() => {
+      setIsTransitioning(true)
+      // Random ripple origin for organic feel
+      setRippleOrigin({
+        x: 20 + Math.random() * 60,
+        y: 20 + Math.random() * 60,
+      })
+
+      // After transition animation (1.5s), change to next image
+      setTimeout(() => {
+        setSlideshowIndex((prev) => (prev + 1) % starredImages.length)
+        setIsTransitioning(false)
+      }, 1500)
+    }, 8000)
+
+    return () => clearInterval(timer)
+  }, [manualBackground, starredImages.length])
+
+  // Reset slideshow when entity changes
+  useEffect(() => {
+    setSlideshowIndex(0)
+    setManualBackground(null)
+    setIsTransitioning(false)
+  }, [selectedEntity])
+
+  // Handle clicking an image to set it as background
+  const handleImageClick = useCallback((imageUrl: string, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) / rect.width) * 100
+    const y = ((event.clientY - rect.top) / rect.height) * 100
+    setRippleOrigin({ x, y })
+    setIsTransitioning(true)
+
+    setTimeout(() => {
+      setManualBackground(imageUrl)
+      setIsTransitioning(false)
+    }, 1500)
+  }, [])
 
   // Create map markers from dwellings and areas
   const mapMarkers = useMemo(() => {
@@ -228,7 +301,7 @@ export default function PropertyPage() {
         <AmbientAudioPlayer audioTracks={audioTracks} autoplay />
       )}
 
-      {/* Fixed Full-Page Background Image */}
+      {/* Fixed Full-Page Background Image with Ripple Transition */}
       <Box
         position="fixed"
         top={0}
@@ -237,12 +310,14 @@ export default function PropertyPage() {
         bottom={0}
         zIndex={0}
         bg="gray.900"
+        overflow="hidden"
       >
-        {backgroundImage ? (
+        {currentBackgroundImage ? (
           <>
+            {/* Current background image */}
             <Box
               as="img"
-              src={backgroundImage}
+              src={currentBackgroundImage}
               alt=""
               position="absolute"
               top={0}
@@ -250,8 +325,80 @@ export default function PropertyPage() {
               w="100%"
               h="100%"
               objectFit="cover"
-              transition="opacity 0.5s ease-in-out"
             />
+
+            {/* Next image with ripple reveal effect */}
+            {nextBackgroundImage && isTransitioning && (
+              <Box
+                position="absolute"
+                top={0}
+                left={0}
+                w="100%"
+                h="100%"
+                overflow="hidden"
+                sx={{
+                  clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
+                  animation: 'rippleExpand 1.5s ease-out forwards',
+                  '@keyframes rippleExpand': {
+                    '0%': {
+                      clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
+                    },
+                    '100%': {
+                      clipPath: `circle(150% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
+                    },
+                  },
+                }}
+              >
+                <Box
+                  as="img"
+                  src={nextBackgroundImage}
+                  alt=""
+                  position="absolute"
+                  top={0}
+                  left={0}
+                  w="100%"
+                  h="100%"
+                  objectFit="cover"
+                />
+              </Box>
+            )}
+
+            {/* Manual selection ripple effect */}
+            {manualBackground && isTransitioning && (
+              <Box
+                position="absolute"
+                top={0}
+                left={0}
+                w="100%"
+                h="100%"
+                overflow="hidden"
+                sx={{
+                  clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
+                  animation: 'rippleExpand 1.5s ease-out forwards',
+                  '@keyframes rippleExpand': {
+                    '0%': {
+                      clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
+                    },
+                    '100%': {
+                      clipPath: `circle(150% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
+                    },
+                  },
+                }}
+              >
+                <Box
+                  as="img"
+                  src={manualBackground}
+                  alt=""
+                  position="absolute"
+                  top={0}
+                  left={0}
+                  w="100%"
+                  h="100%"
+                  objectFit="cover"
+                />
+              </Box>
+            )}
+
             {/* Dark overlay for readability */}
             <Box
               position="absolute"
@@ -325,17 +472,28 @@ export default function PropertyPage() {
                 </HStack>
               </Box>
 
-              {selectedEntity && (
+              <HStack>
+                {selectedEntity && (
+                  <Button
+                    leftIcon={<FiX />}
+                    variant="outline"
+                    colorScheme="whiteAlpha"
+                    size="sm"
+                    onClick={() => setSelectedEntity(null)}
+                  >
+                    Back to Property
+                  </Button>
+                )}
                 <Button
-                  leftIcon={<FiX />}
-                  variant="outline"
-                  colorScheme="whiteAlpha"
+                  as={RouterLink}
+                  to={`/explore/${slug}`}
+                  variant="solid"
+                  colorScheme="brand"
                   size="sm"
-                  onClick={() => setSelectedEntity(null)}
                 >
-                  Back to Property
+                  Explore Full Screen
                 </Button>
-              )}
+              </HStack>
             </HStack>
           </Container>
         </Box>
@@ -410,6 +568,7 @@ export default function PropertyPage() {
                                   selectedEntity?.id === dwelling.id ? null : { type: 'dwelling', id: dwelling.id, name: dwelling.name }
                                 )}
                                 media={getEntityMedia('dwelling', dwelling.id)}
+                                onImageClick={handleImageClick}
                               />
                             ))}
                           </VStack>
@@ -431,6 +590,7 @@ export default function PropertyPage() {
                                   selectedEntity?.id === area.id ? null : { type: 'area', id: area.id, name: area.name }
                                 )}
                                 media={getEntityMedia('area', area.id)}
+                                onImageClick={handleImageClick}
                               />
                             ))}
                           </VStack>
@@ -462,26 +622,61 @@ export default function PropertyPage() {
                 {propertyImages.length > 0 && (
                   <Card bg={cardBg} backdropFilter="blur(10px)" borderWidth="1px" borderColor={cardBorder} shadow="xl">
                     <CardBody>
-                      <Heading size="md" mb={4}>Gallery ({propertyImages.length} photos)</Heading>
+                      <HStack justify="space-between" mb={4}>
+                        <Heading size="md">Gallery ({propertyImages.length} photos)</Heading>
+                        {starredImages.length > 1 && !manualBackground && (
+                          <Badge colorScheme="yellow" fontSize="xs">
+                            Slideshow: {slideshowIndex + 1}/{starredImages.length}
+                          </Badge>
+                        )}
+                      </HStack>
                       <SimpleGrid columns={{ base: 3, md: 4, lg: 5 }} spacing={2}>
                         {propertyImages.map((img, idx) => (
                           <AspectRatio key={img.id || idx} ratio={1}>
-                            <Image
-                              src={img.url}
-                              alt={img.file_name || `Photo ${idx + 1}`}
-                              objectFit="cover"
-                              borderRadius="md"
-                              cursor="pointer"
-                              opacity={backgroundImage === img.url ? 1 : 0.7}
-                              border={backgroundImage === img.url ? '3px solid' : 'none'}
-                              borderColor="luxury.gold"
-                              _hover={{ opacity: 1 }}
-                              transition="all 0.2s"
-                              onClick={() => setSelectedEntity(null)}
-                            />
+                            <Box position="relative" w="100%" h="100%">
+                              <Image
+                                src={img.url}
+                                alt={img.file_name || `Photo ${idx + 1}`}
+                                objectFit="cover"
+                                borderRadius="md"
+                                cursor="pointer"
+                                opacity={currentBackgroundImage === img.url ? 1 : 0.7}
+                                border={currentBackgroundImage === img.url ? '3px solid' : 'none'}
+                                borderColor="luxury.gold"
+                                _hover={{ opacity: 1, transform: 'scale(1.05)' }}
+                                transition="all 0.2s"
+                                onClick={(e) => handleImageClick(img.url, e)}
+                                w="100%"
+                                h="100%"
+                              />
+                              {/* Star indicator */}
+                              {img.starred && (
+                                <Box
+                                  position="absolute"
+                                  top={1}
+                                  left={1}
+                                  bg="yellow.400"
+                                  borderRadius="full"
+                                  p={0.5}
+                                  pointerEvents="none"
+                                >
+                                  <Icon as={FiStar} boxSize={3} color="white" fill="white" />
+                                </Box>
+                              )}
+                            </Box>
                           </AspectRatio>
                         ))}
                       </SimpleGrid>
+                      {manualBackground && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          mt={3}
+                          onClick={() => setManualBackground(null)}
+                        >
+                          Resume slideshow
+                        </Button>
+                      )}
                     </CardBody>
                   </Card>
                 )}
@@ -564,12 +759,14 @@ interface DwellingCardProps {
   isSelected: boolean
   onClick: () => void
   media: Media[]
+  onImageClick?: (url: string, event: React.MouseEvent) => void
 }
 
-function DwellingCard({ dwelling, isSelected, onClick, media }: DwellingCardProps) {
+function DwellingCard({ dwelling, isSelected, onClick, media, onImageClick }: DwellingCardProps) {
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const selectedBorder = useColorModeValue('luxury.gold', 'yellow.400')
   const images = media.filter((m) => m.type === 'image')
+  const starredCount = images.filter((m) => m.starred).length
 
   return (
     <Box
@@ -586,6 +783,14 @@ function DwellingCard({ dwelling, isSelected, onClick, media }: DwellingCardProp
       <HStack justify="space-between" mb={2}>
         <Heading size="sm">{dwelling.name}</Heading>
         <HStack>
+          {starredCount > 0 && (
+            <Badge colorScheme="yellow">
+              <HStack spacing={1}>
+                <Icon as={FiStar} boxSize={3} />
+                <Text>{starredCount}</Text>
+              </HStack>
+            </Badge>
+          )}
           {images.length > 0 && (
             <Badge colorScheme="green">{images.length} photos</Badge>
           )}
@@ -627,12 +832,33 @@ function DwellingCard({ dwelling, isSelected, onClick, media }: DwellingCardProp
           <SimpleGrid columns={{ base: 2, md: 3 }} spacing={2}>
             {images.map((img) => (
               <AspectRatio key={img.id || img.url} ratio={4 / 3}>
-                <Image
-                  src={img.url}
-                  alt={img.file_name || 'Dwelling photo'}
-                  objectFit="cover"
-                  borderRadius="md"
-                />
+                <Box position="relative" w="100%" h="100%">
+                  <Image
+                    src={img.url}
+                    alt={img.file_name || 'Dwelling photo'}
+                    objectFit="cover"
+                    borderRadius="md"
+                    cursor="pointer"
+                    _hover={{ transform: 'scale(1.05)' }}
+                    transition="all 0.2s"
+                    onClick={(e) => onImageClick?.(img.url, e)}
+                    w="100%"
+                    h="100%"
+                  />
+                  {img.starred && (
+                    <Box
+                      position="absolute"
+                      top={1}
+                      left={1}
+                      bg="yellow.400"
+                      borderRadius="full"
+                      p={0.5}
+                      pointerEvents="none"
+                    >
+                      <Icon as={FiStar} boxSize={3} color="white" fill="white" />
+                    </Box>
+                  )}
+                </Box>
               </AspectRatio>
             ))}
           </SimpleGrid>
@@ -647,12 +873,14 @@ interface AreaCardProps {
   isSelected: boolean
   onClick: () => void
   media: Media[]
+  onImageClick?: (url: string, event: React.MouseEvent) => void
 }
 
-function AreaCard({ area, isSelected, onClick, media }: AreaCardProps) {
+function AreaCard({ area, isSelected, onClick, media, onImageClick }: AreaCardProps) {
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const selectedBorder = useColorModeValue('green.400', 'green.300')
   const images = media.filter((m) => m.type === 'image')
+  const starredCount = images.filter((m) => m.starred).length
 
   return (
     <Box
@@ -669,6 +897,14 @@ function AreaCard({ area, isSelected, onClick, media }: AreaCardProps) {
       <HStack justify="space-between" mb={2}>
         <Heading size="sm">{area.name}</Heading>
         <HStack>
+          {starredCount > 0 && (
+            <Badge colorScheme="yellow">
+              <HStack spacing={1}>
+                <Icon as={FiStar} boxSize={3} />
+                <Text>{starredCount}</Text>
+              </HStack>
+            </Badge>
+          )}
           {images.length > 0 && (
             <Badge colorScheme="blue">{images.length} photos</Badge>
           )}
@@ -698,12 +934,33 @@ function AreaCard({ area, isSelected, onClick, media }: AreaCardProps) {
           <SimpleGrid columns={{ base: 2, md: 3 }} spacing={2}>
             {images.map((img) => (
               <AspectRatio key={img.id || img.url} ratio={4 / 3}>
-                <Image
-                  src={img.url}
-                  alt={img.file_name || 'Area photo'}
-                  objectFit="cover"
-                  borderRadius="md"
-                />
+                <Box position="relative" w="100%" h="100%">
+                  <Image
+                    src={img.url}
+                    alt={img.file_name || 'Area photo'}
+                    objectFit="cover"
+                    borderRadius="md"
+                    cursor="pointer"
+                    _hover={{ transform: 'scale(1.05)' }}
+                    transition="all 0.2s"
+                    onClick={(e) => onImageClick?.(img.url, e)}
+                    w="100%"
+                    h="100%"
+                  />
+                  {img.starred && (
+                    <Box
+                      position="absolute"
+                      top={1}
+                      left={1}
+                      bg="yellow.400"
+                      borderRadius="full"
+                      p={0.5}
+                      pointerEvents="none"
+                    >
+                      <Icon as={FiStar} boxSize={3} color="white" fill="white" />
+                    </Box>
+                  )}
+                </Box>
               </AspectRatio>
             ))}
           </SimpleGrid>

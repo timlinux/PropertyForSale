@@ -95,6 +95,9 @@ func (h *MediaHandler) Update(c *gin.Context) {
 	if v, ok := req["autoplay"].(bool); ok {
 		input.Autoplay = &v
 	}
+	if v, ok := req["starred"].(bool); ok {
+		input.Starred = &v
+	}
 	if v, ok := req["sort_order"].(float64); ok {
 		sortOrder := int(v)
 		input.SortOrder = &sortOrder
@@ -123,4 +126,31 @@ func (h *MediaHandler) Delete(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNoContent, nil)
+}
+
+// ToggleStar handles POST /api/v1/media/:id/star
+func (h *MediaHandler) ToggleStar(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	m, err := h.mediaSvc.GetByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "media not found"})
+		return
+	}
+
+	// Toggle the starred status
+	newStarred := !m.Starred
+	input := service.UpdateMediaInput{Starred: &newStarred}
+
+	m, err = h.mediaSvc.Update(c.Request.Context(), id, input)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, m)
 }

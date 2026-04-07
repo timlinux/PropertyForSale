@@ -47,7 +47,7 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { FiPlus, FiTrash2, FiHome, FiLayers, FiMapPin } from 'react-icons/fi'
+import { FiPlus, FiTrash2, FiHome, FiLayers, FiMapPin, FiStar } from 'react-icons/fi'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, Property, Dwelling, Room, Area } from '../../api'
 import { useAuthHeaders } from '../../context/authStore'
@@ -678,6 +678,21 @@ function MediaTab({ property }: { property: Property }) {
     },
   })
 
+  const starMutation = useMutation({
+    mutationFn: (id: string) => api.toggleMediaStar(id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['media', property.slug] })
+      toast({
+        title: data.starred ? 'Image starred' : 'Star removed',
+        status: 'success',
+        duration: 2000,
+      })
+    },
+    onError: () => {
+      toast({ title: 'Failed to toggle star', status: 'error', duration: 3000 })
+    },
+  })
+
   // Update selected entity ID when type changes
   const handleEntityTypeChange = (type: 'property' | 'dwelling' | 'room' | 'area') => {
     setSelectedEntityType(type)
@@ -923,14 +938,29 @@ function MediaTab({ property }: { property: Property }) {
                 <Card key={item.id} position="relative" overflow="hidden" variant="outline">
                   <CardBody p={0}>
                     {item.type === 'image' ? (
-                      <Box
-                        as="img"
-                        src={item.thumbnail_url || item.url}
-                        alt={item.file_name}
-                        w="100%"
-                        h="150px"
-                        objectFit="cover"
-                      />
+                      <Box position="relative">
+                        <Box
+                          as="img"
+                          src={item.thumbnail_url || item.url}
+                          alt={item.file_name}
+                          w="100%"
+                          h="150px"
+                          objectFit="cover"
+                        />
+                        {/* Star indicator overlay */}
+                        {item.starred && (
+                          <Box
+                            position="absolute"
+                            top={1}
+                            left={1}
+                            bg="yellow.400"
+                            borderRadius="full"
+                            p={1}
+                          >
+                            <FiStar size={14} color="white" fill="white" />
+                          </Box>
+                        )}
+                      </Box>
                     ) : (
                       <Center h="150px" bg="gray.100">
                         <VStack>
@@ -949,15 +979,28 @@ function MediaTab({ property }: { property: Property }) {
                         <Text fontSize="xs" color="gray.500">
                           {(item.file_size / 1024 / 1024).toFixed(2)} MB
                         </Text>
-                        <IconButton
-                          aria-label="Delete media"
-                          icon={<FiTrash2 />}
-                          size="xs"
-                          colorScheme="red"
-                          variant="ghost"
-                          onClick={() => deleteMutation.mutate(item.id)}
-                          isLoading={deleteMutation.isPending}
-                        />
+                        <HStack spacing={1}>
+                          {item.type === 'image' && (
+                            <IconButton
+                              aria-label={item.starred ? 'Remove star' : 'Star image'}
+                              icon={<FiStar fill={item.starred ? 'currentColor' : 'none'} />}
+                              size="xs"
+                              colorScheme={item.starred ? 'yellow' : 'gray'}
+                              variant={item.starred ? 'solid' : 'ghost'}
+                              onClick={() => starMutation.mutate(item.id)}
+                              isLoading={starMutation.isPending}
+                            />
+                          )}
+                          <IconButton
+                            aria-label="Delete media"
+                            icon={<FiTrash2 />}
+                            size="xs"
+                            colorScheme="red"
+                            variant="ghost"
+                            onClick={() => deleteMutation.mutate(item.id)}
+                            isLoading={deleteMutation.isPending}
+                          />
+                        </HStack>
                       </HStack>
                     </Box>
                   </CardBody>

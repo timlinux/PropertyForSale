@@ -47,6 +47,7 @@ type Media struct {
 	Height       int         `json:"height,omitempty"`
 	Duration     float64     `json:"duration,omitempty"` // For video/audio in seconds
 	Autoplay     bool        `json:"autoplay" gorm:"default:false"`
+	Starred      bool        `json:"starred" gorm:"default:false"`
 	Metadata     types.JSONB `json:"metadata" gorm:"type:text;default:'{}'"`
 	SortOrder    int         `json:"sort_order" gorm:"default:0"`
 	CreatedAt    time.Time   `json:"created_at"`

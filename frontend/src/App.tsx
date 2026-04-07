@@ -6,6 +6,7 @@ import { Box } from '@chakra-ui/react'
 import Layout from './components/common/Layout'
 import HomePage from './pages/HomePage'
 import PropertyPage from './pages/PropertyPage'
+import PropertyExplorer from './pages/PropertyExplorer'
 import PropertiesPage from './pages/PropertiesPage'
 import LoginPage from './pages/LoginPage'
 import DevLoginPage from './pages/DevLoginPage'
@@ -45,6 +46,9 @@ function App() {
   return (
     <Box minH="100vh">
       <Routes>
+        {/* Full-screen explorer route (no layout wrapper) */}
+        <Route path="explore/:slug" element={<PropertyExplorer />} />
+
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="properties" element={<PropertiesPage />} />

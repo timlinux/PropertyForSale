@@ -122,6 +122,7 @@ func (s *MediaService) ListByEntity(ctx context.Context, entityType media.Entity
 // UpdateMediaInput contains the data for updating media
 type UpdateMediaInput struct {
 	Autoplay  *bool
+	Starred   *bool
 	SortOrder *int
 	Metadata  map[string]interface{}
 }
@@ -135,6 +136,9 @@ func (s *MediaService) Update(ctx context.Context, id uuid.UUID, input UpdateMed
 
 	if input.Autoplay != nil {
 		m.Autoplay = *input.Autoplay
+	}
+	if input.Starred != nil {
+		m.Starred = *input.Starred
 	}
 	if input.SortOrder != nil {
 		m.SortOrder = *input.SortOrder
