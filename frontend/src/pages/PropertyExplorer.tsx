@@ -279,11 +279,17 @@ export default function PropertyExplorer() {
     }
   }, [context])
 
+  // Generate random ripple origin for variety
+  const getRandomRippleOrigin = useCallback(() => ({
+    x: 15 + Math.random() * 70,
+    y: 15 + Math.random() * 70,
+  }), [])
+
   const navigateMedia = useCallback((direction: 'next' | 'prev') => {
     if (direction === 'next' && hasNextMedia) {
-      // Prepare transition
+      // Prepare transition with random origin
       setNextImageUrl(currentMedia[mediaIndex + 1]?.url || null)
-      setRippleOrigin({ x: 80, y: 50 })
+      setRippleOrigin(getRandomRippleOrigin())
       setIsTransitioning(true)
 
       setTimeout(() => {
@@ -292,7 +298,7 @@ export default function PropertyExplorer() {
       }, 500)
     } else if (direction === 'prev' && hasPrevMedia) {
       setNextImageUrl(currentMedia[mediaIndex - 1]?.url || null)
-      setRippleOrigin({ x: 20, y: 50 })
+      setRippleOrigin(getRandomRippleOrigin())
       setIsTransitioning(true)
 
       setTimeout(() => {
@@ -300,21 +306,21 @@ export default function PropertyExplorer() {
         setIsTransitioning(false)
       }, 500)
     }
-  }, [hasNextMedia, hasPrevMedia, currentMedia, mediaIndex])
+  }, [hasNextMedia, hasPrevMedia, currentMedia, mediaIndex, getRandomRippleOrigin])
 
   // Trigger ripple when entity changes
   const prevContextRef = useRef(context)
   useEffect(() => {
     if (prevContextRef.current !== context && currentMedia.length > 0) {
       setNextImageUrl(currentMedia[0]?.url || null)
-      setRippleOrigin({ x: 50, y: 50 })
+      setRippleOrigin(getRandomRippleOrigin())
       setIsTransitioning(true)
       setTimeout(() => {
         setIsTransitioning(false)
       }, 500)
     }
     prevContextRef.current = context
-  }, [context, currentMedia])
+  }, [context, currentMedia, getRandomRippleOrigin])
 
   const navigateSibling = useCallback((direction: 'next' | 'prev') => {
     setMediaIndex(0)
