@@ -421,33 +421,37 @@ func runMigrations(db *gorm.DB) error {
 	return nil
 }
 
-// fixZeroMediaIDs generates proper UUIDs for media records that have zero UUIDs
+// fixZeroMediaIDs generates proper UUIDs for media records that have zero or empty UUIDs
 func fixZeroMediaIDs(db *gorm.DB) error {
 	zeroUUID := "00000000-0000-0000-0000-000000000000"
 
-	// Get all media with zero UUID
+	// Get all media with zero, empty, or null UUID using raw SQL
 	type mediaRow struct {
 		URL string
+		ID  string
 	}
 	var rows []mediaRow
-	result := db.Table("media").Select("url").Where("id = ?", zeroUUID).Find(&rows)
+	result := db.Raw(`SELECT id, url FROM media WHERE id = ? OR id = '' OR id IS NULL`, zeroUUID).Scan(&rows)
 	if result.Error != nil {
 		return fmt.Errorf("failed to find zero-UUID media: %w", result.Error)
 	}
 
 	if len(rows) == 0 {
+		log.Debug().Msg("No media records with zero/empty UUIDs found")
 		return nil
 	}
 
-	log.Info().Int("count", len(rows)).Msg("Fixing media records with zero UUIDs")
+	log.Info().Int("count", len(rows)).Msg("Fixing media records with zero/empty UUIDs")
 
 	// Update each one with a unique ID based on URL hash
 	for _, row := range rows {
 		// Generate a deterministic UUID from the URL using namespace UUID
 		newID := uuid.NewSHA1(uuid.NameSpaceURL, []byte(row.URL)).String()
-		result := db.Exec("UPDATE media SET id = ? WHERE id = ? AND url = ?", newID, zeroUUID, row.URL)
+		result := db.Exec(`UPDATE media SET id = ? WHERE url = ? AND (id = ? OR id = '' OR id IS NULL)`, newID, row.URL, zeroUUID)
 		if result.Error != nil {
 			log.Warn().Err(result.Error).Str("url", row.URL).Msg("Failed to update media ID")
+		} else {
+			log.Debug().Str("url", row.URL).Str("newID", newID).Msg("Updated media ID")
 		}
 	}
 
