@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Tim Sutton <tim@kartoza.com>
 // SPDX-License-Identifier: EUPL-1.2
 
+import { useMemo } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import {
   Box,
@@ -19,7 +20,7 @@ import {
   Button,
 } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
-import { FiMaximize, FiInfo } from 'react-icons/fi'
+import { FiMaximize, FiInfo, FiImage } from 'react-icons/fi'
 import { api, Property } from '../api'
 
 export default function PropertiesPage() {
@@ -88,6 +89,30 @@ interface PropertyCardProps {
 }
 
 function PropertyCard({ property }: PropertyCardProps) {
+  // Fetch media for this property
+  const { data: mediaData } = useQuery({
+    queryKey: ['property-media', property.slug],
+    queryFn: () => api.getPropertyMedia(property.slug),
+    enabled: !!property.slug,
+  })
+
+  // Get a random starred image (or any image if no starred)
+  const thumbnailUrl = useMemo(() => {
+    const allMedia = mediaData?.data || []
+    const images = allMedia.filter(m => m.type === 'image')
+
+    // Prefer starred images
+    const starredImages = images.filter(m => m.starred)
+    const pool = starredImages.length > 0 ? starredImages : images
+
+    if (pool.length === 0) return null
+
+    // Use property id as seed for consistent random selection per property
+    const seed = property.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const randomIndex = seed % pool.length
+    return pool[randomIndex]?.url || null
+  }, [mediaData, property.id])
+
   return (
     <Box
       display="block"
@@ -116,15 +141,24 @@ function PropertyCard({ property }: PropertyCardProps) {
         borderRadius="2xl"
         cursor="pointer"
       >
-        <Image
-          className="property-image"
-          src={`https://picsum.photos/seed/${property.id}/600/400`}
-          alt={property.name}
-          objectFit="cover"
-          w="full"
-          h="full"
-          transition="transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)"
-        />
+        {thumbnailUrl ? (
+          <Image
+            className="property-image"
+            src={thumbnailUrl}
+            alt={property.name}
+            objectFit="cover"
+            w="full"
+            h="full"
+            transition="transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)"
+          />
+        ) : (
+          <Center w="full" h="full" color="neutral.300">
+            <VStack spacing={2}>
+              <Icon as={FiImage} boxSize={12} />
+              <Text fontSize="sm">No images</Text>
+            </VStack>
+          </Center>
+        )}
 
         {/* Hover overlay with action buttons */}
         <Box
