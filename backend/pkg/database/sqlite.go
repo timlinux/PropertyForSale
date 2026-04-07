@@ -181,12 +181,16 @@ func runMigrations(db *gorm.DB) error {
 			file_name TEXT,
 			file_size INTEGER,
 			mime_type TEXT,
+			width INTEGER DEFAULT 0,
+			height INTEGER DEFAULT 0,
+			duration REAL DEFAULT 0,
 			autoplay INTEGER DEFAULT 0,
 			sort_order INTEGER DEFAULT 0,
 			metadata TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+
 
 		// Content versions table
 		`CREATE TABLE IF NOT EXISTS content_versions (
@@ -394,6 +398,18 @@ func runMigrations(db *gorm.DB) error {
 		if err := db.Exec(migration).Error; err != nil {
 			return fmt.Errorf("migration failed: %w", err)
 		}
+	}
+
+	// Add missing columns to existing tables (ignore errors if columns exist)
+	schemaUpdates := []string{
+		`ALTER TABLE media ADD COLUMN width INTEGER DEFAULT 0`,
+		`ALTER TABLE media ADD COLUMN height INTEGER DEFAULT 0`,
+		`ALTER TABLE media ADD COLUMN duration REAL DEFAULT 0`,
+	}
+
+	for _, update := range schemaUpdates {
+		// Ignore errors - column may already exist
+		db.Exec(update)
 	}
 
 	return nil
