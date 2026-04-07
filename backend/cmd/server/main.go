@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -26,10 +27,20 @@ var (
 )
 
 func main() {
+	// Parse command line flags
+	devMode := flag.Bool("dev", false, "Enable development mode (dev logins, verbose logging)")
+	flag.Parse()
+
+	// Set environment variable if --dev flag is passed
+	if *devMode {
+		os.Setenv("ENV", "development")
+	}
+
 	// Initialize logger
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	if os.Getenv("ENV") == "development" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+		log.Info().Msg("Development mode enabled - dev logins available at /api/v1/auth/dev-login")
 	}
 
 	log.Info().

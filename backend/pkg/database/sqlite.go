@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -412,5 +413,44 @@ func runMigrations(db *gorm.DB) error {
 		db.Exec(update)
 	}
 
+	// Fix media records with zero UUIDs
+	if err := fixZeroMediaIDs(db); err != nil {
+		log.Warn().Err(err).Msg("Failed to fix zero media IDs")
+	}
+
+	return nil
+}
+
+// fixZeroMediaIDs generates proper UUIDs for media records that have zero UUIDs
+func fixZeroMediaIDs(db *gorm.DB) error {
+	zeroUUID := "00000000-0000-0000-0000-000000000000"
+
+	// Get all media with zero UUID
+	type mediaRow struct {
+		URL string
+	}
+	var rows []mediaRow
+	result := db.Table("media").Select("url").Where("id = ?", zeroUUID).Find(&rows)
+	if result.Error != nil {
+		return fmt.Errorf("failed to find zero-UUID media: %w", result.Error)
+	}
+
+	if len(rows) == 0 {
+		return nil
+	}
+
+	log.Info().Int("count", len(rows)).Msg("Fixing media records with zero UUIDs")
+
+	// Update each one with a unique ID based on URL hash
+	for _, row := range rows {
+		// Generate a deterministic UUID from the URL using namespace UUID
+		newID := uuid.NewSHA1(uuid.NameSpaceURL, []byte(row.URL)).String()
+		result := db.Exec("UPDATE media SET id = ? WHERE id = ? AND url = ?", newID, zeroUUID, row.URL)
+		if result.Error != nil {
+			log.Warn().Err(result.Error).Str("url", row.URL).Msg("Failed to update media ID")
+		}
+	}
+
+	log.Info().Int("count", len(rows)).Msg("Fixed media records with proper UUIDs")
 	return nil
 }
