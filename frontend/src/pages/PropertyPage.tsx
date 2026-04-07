@@ -41,10 +41,11 @@ import {
   FiChevronRight,
   FiCalendar,
   FiSquare,
+  FiX,
 } from 'react-icons/fi'
 import { api, type Dwelling, type Area, type Media } from '../api'
 import PropertyMap from '../components/map/PropertyMap'
-import { MediaGallery, AmbientAudioPlayer } from '../components/media'
+import { AmbientAudioPlayer } from '../components/media'
 import { usePageTracking } from '../hooks/usePageTracking'
 import { SEOHead } from '../components/common/SEOHead'
 
@@ -53,10 +54,11 @@ export default function PropertyPage() {
   const [selectedEntity, setSelectedEntity] = useState<{
     type: 'property' | 'dwelling' | 'area'
     id: string
+    name: string
   } | null>(null)
 
-  const bgColor = useColorModeValue('gray.50', 'gray.900')
-  const cardBg = useColorModeValue('white', 'gray.800')
+  const cardBg = useColorModeValue('whiteAlpha.900', 'blackAlpha.800')
+  const cardBorder = useColorModeValue('whiteAlpha.300', 'whiteAlpha.200')
 
   const { data: property, isLoading, error } = useQuery({
     queryKey: ['property', slug],
@@ -90,8 +92,8 @@ export default function PropertyPage() {
   usePageTracking({ propertyId: property?.id })
 
   // Filter media by type
-  const propertyMedia = useMemo(
-    () => allMedia.filter((m) => m.entity_type === 'property'),
+  const propertyImages = useMemo(
+    () => allMedia.filter((m) => m.entity_type === 'property' && m.type === 'image'),
     [allMedia]
   )
   const audioTracks = useMemo(
@@ -103,6 +105,22 @@ export default function PropertyPage() {
   const getEntityMedia = (entityType: string, entityId: string) => {
     return allMedia.filter((m) => m.entity_type === entityType && m.entity_id === entityId)
   }
+
+  // Get background image based on selected entity
+  const backgroundImage = useMemo(() => {
+    if (selectedEntity) {
+      const entityMedia = getEntityMedia(selectedEntity.type, selectedEntity.id)
+      const images = entityMedia.filter((m) => m.type === 'image')
+      if (images.length > 0) {
+        return images[0].url
+      }
+    }
+    // Default to property's first image
+    if (propertyImages.length > 0) {
+      return propertyImages[0].url
+    }
+    return null
+  }, [selectedEntity, propertyImages, allMedia])
 
   // Create map markers from dwellings and areas
   const mapMarkers = useMemo(() => {
@@ -116,15 +134,13 @@ export default function PropertyPage() {
     }> = []
 
     dwellings.forEach((d) => {
-      // In a real app, dwellings would have their own coordinates
-      // For now, offset slightly from property center
       markers.push({
         id: d.id,
         lat: (property?.latitude || 0) + (Math.random() - 0.5) * 0.001,
         lng: (property?.longitude || 0) + (Math.random() - 0.5) * 0.001,
         label: d.name,
         type: 'dwelling',
-        onClick: () => setSelectedEntity({ type: 'dwelling', id: d.id }),
+        onClick: () => setSelectedEntity({ type: 'dwelling', id: d.id, name: d.name }),
       })
     })
 
@@ -135,7 +151,7 @@ export default function PropertyPage() {
         lng: (property?.longitude || 0) + (Math.random() - 0.5) * 0.002,
         label: a.name,
         type: 'area',
-        onClick: () => setSelectedEntity({ type: 'area', id: a.id }),
+        onClick: () => setSelectedEntity({ type: 'area', id: a.id, name: a.name }),
       })
     })
 
@@ -144,7 +160,7 @@ export default function PropertyPage() {
 
   if (isLoading) {
     return (
-      <Center minH="50vh">
+      <Center minH="100vh" bg="gray.900">
         <Spinner size="xl" color="luxury.gold" />
       </Center>
     )
@@ -198,7 +214,7 @@ export default function PropertyPage() {
   })
 
   return (
-    <Box bg={bgColor} minH="100vh">
+    <Box minH="100vh" position="relative">
       <SEOHead
         title={`${property.name}${property.city ? ` in ${property.city}` : ''}`}
         description={seoDescription}
@@ -206,242 +222,338 @@ export default function PropertyPage() {
         type="website"
         structuredData={structuredData}
       />
+
       {/* Ambient Audio Player */}
       {audioTracks.length > 0 && (
         <AmbientAudioPlayer audioTracks={audioTracks} autoplay />
       )}
 
-      {/* Hero Media Gallery */}
-      <Box position="relative">
-        <MediaGallery media={propertyMedia} />
+      {/* Fixed Full-Page Background Image */}
+      <Box
+        position="fixed"
+        top={0}
+        left={0}
+        right={0}
+        bottom={0}
+        zIndex={0}
+        bg="gray.900"
+      >
+        {backgroundImage ? (
+          <>
+            <Box
+              as="img"
+              src={backgroundImage}
+              alt=""
+              position="absolute"
+              top={0}
+              left={0}
+              w="100%"
+              h="100%"
+              objectFit="cover"
+              transition="opacity 0.5s ease-in-out"
+            />
+            {/* Dark overlay for readability */}
+            <Box
+              position="absolute"
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
+              bg="blackAlpha.500"
+            />
+          </>
+        ) : (
+          <Box
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            bgGradient="linear(to-br, gray.800, gray.900)"
+          />
+        )}
+      </Box>
 
-        {/* Overlay with property info */}
+      {/* Scrollable Content */}
+      <Box position="relative" zIndex={1} minH="100vh">
+        {/* Header with breadcrumb and title */}
         <Box
-          position="absolute"
-          bottom={0}
-          left={0}
-          right={0}
-          p={{ base: 4, md: 8 }}
-          bgGradient="linear(to-t, blackAlpha.800, transparent)"
-          color="white"
+          py={6}
+          px={4}
+          bgGradient="linear(to-b, blackAlpha.700, transparent)"
         >
           <Container maxW="container.xl">
             <Breadcrumb
-              separator={<FiChevronRight />}
+              separator={<FiChevronRight color="white" />}
               color="whiteAlpha.800"
               fontSize="sm"
-              mb={2}
+              mb={4}
             >
               <BreadcrumbItem>
-                <BreadcrumbLink as={RouterLink} to="/">Home</BreadcrumbLink>
+                <BreadcrumbLink as={RouterLink} to="/" color="whiteAlpha.800" _hover={{ color: 'white' }}>
+                  Home
+                </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbItem>
-                <BreadcrumbLink as={RouterLink} to="/properties">Properties</BreadcrumbLink>
+                <BreadcrumbLink as={RouterLink} to="/properties" color="whiteAlpha.800" _hover={{ color: 'white' }}>
+                  Properties
+                </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbItem isCurrentPage>
-                <BreadcrumbLink>{property.name}</BreadcrumbLink>
+                <BreadcrumbLink color="white">{property.name}</BreadcrumbLink>
               </BreadcrumbItem>
             </Breadcrumb>
 
-            <Heading size="2xl" mb={2}>{property.name}</Heading>
-            <HStack spacing={4} flexWrap="wrap">
-              <HStack>
-                <Icon as={FiMapPin} />
-                <Text>{property.city}, {property.country}</Text>
-              </HStack>
-              {property.status === 'published' && (
-                <Badge colorScheme="green" fontSize="sm">Available</Badge>
+            <HStack justify="space-between" align="start" flexWrap="wrap" gap={4}>
+              <Box>
+                <Heading size="2xl" color="white" textShadow="0 2px 10px rgba(0,0,0,0.5)">
+                  {selectedEntity ? selectedEntity.name : property.name}
+                </Heading>
+                <HStack spacing={4} mt={2} flexWrap="wrap">
+                  <HStack color="whiteAlpha.900">
+                    <Icon as={FiMapPin} />
+                    <Text>{property.city}, {property.country}</Text>
+                  </HStack>
+                  {property.status === 'published' && (
+                    <Badge colorScheme="green" fontSize="sm">Available</Badge>
+                  )}
+                  {selectedEntity && (
+                    <Badge colorScheme="blue" fontSize="sm">
+                      Viewing: {selectedEntity.type}
+                    </Badge>
+                  )}
+                </HStack>
+              </Box>
+
+              {selectedEntity && (
+                <Button
+                  leftIcon={<FiX />}
+                  variant="outline"
+                  colorScheme="whiteAlpha"
+                  size="sm"
+                  onClick={() => setSelectedEntity(null)}
+                >
+                  Back to Property
+                </Button>
               )}
             </HStack>
           </Container>
         </Box>
-      </Box>
 
-      {/* Main Content */}
-      <Container maxW="container.xl" py={8}>
-        <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={8}>
-          {/* Left Column - Details */}
-          <GridItem>
-            <VStack spacing={8} align="stretch">
-              {/* Price Card */}
-              <Card bg={cardBg} shadow="md">
-                <CardBody>
-                  <Text fontSize="3xl" fontWeight="bold" color="luxury.gold">
-                    {property.currency} {property.price_min?.toLocaleString()}
-                    {property.price_max && property.price_max !== property.price_min && (
-                      <Text as="span" fontSize="xl" color="gray.500">
-                        {' '}- {property.price_max.toLocaleString()}
-                      </Text>
-                    )}
-                  </Text>
-                </CardBody>
-              </Card>
-
-              {/* Description */}
-              <Card bg={cardBg} shadow="md">
-                <CardBody>
-                  <Heading size="md" mb={4}>About This Property</Heading>
-                  <Text fontSize="lg" color="gray.600" whiteSpace="pre-wrap">
-                    {property.description || 'No description available.'}
-                  </Text>
-                </CardBody>
-              </Card>
-
-              {/* Tabs for Dwellings, Areas, Location */}
-              <Card bg={cardBg} shadow="md" overflow="hidden">
-                <Tabs colorScheme="brand" isLazy>
-                  <TabList px={4} pt={4}>
-                    <Tab>
-                      <HStack>
-                        <Icon as={FiHome} />
-                        <Text>Dwellings ({dwellings.length})</Text>
-                      </HStack>
-                    </Tab>
-                    <Tab>
-                      <HStack>
-                        <Icon as={FiGrid} />
-                        <Text>Areas ({areas.length})</Text>
-                      </HStack>
-                    </Tab>
-                    <Tab>
-                      <HStack>
-                        <Icon as={FiMapPin} />
-                        <Text>Location</Text>
-                      </HStack>
-                    </Tab>
-                  </TabList>
-
-                  <TabPanels>
-                    {/* Dwellings Tab */}
-                    <TabPanel>
-                      {dwellings.length === 0 ? (
-                        <Text color="gray.500">No dwellings listed yet.</Text>
-                      ) : (
-                        <VStack spacing={4} align="stretch">
-                          {dwellings.map((dwelling) => (
-                            <DwellingCard
-                              key={dwelling.id}
-                              dwelling={dwelling}
-                              isSelected={selectedEntity?.id === dwelling.id}
-                              onClick={() => setSelectedEntity(
-                                selectedEntity?.id === dwelling.id ? null : { type: 'dwelling', id: dwelling.id }
-                              )}
-                              media={getEntityMedia('dwelling', dwelling.id)}
-                            />
-                          ))}
-                        </VStack>
-                      )}
-                    </TabPanel>
-
-                    {/* Areas Tab */}
-                    <TabPanel>
-                      {areas.length === 0 ? (
-                        <Text color="gray.500">No areas listed yet.</Text>
-                      ) : (
-                        <VStack spacing={4} align="stretch">
-                          {areas.map((area) => (
-                            <AreaCard
-                              key={area.id}
-                              area={area}
-                              isSelected={selectedEntity?.id === area.id}
-                              onClick={() => setSelectedEntity(
-                                selectedEntity?.id === area.id ? null : { type: 'area', id: area.id }
-                              )}
-                              media={getEntityMedia('area', area.id)}
-                            />
-                          ))}
-                        </VStack>
-                      )}
-                    </TabPanel>
-
-                    {/* Location Tab */}
-                    <TabPanel>
-                      <VStack spacing={4} align="stretch">
-                        <Box>
-                          <Text fontWeight="bold">{property.address_line1}</Text>
-                          {property.address_line2 && <Text>{property.address_line2}</Text>}
-                          <Text>
-                            {property.city}, {property.state} {property.postal_code}
-                          </Text>
-                          <Text>{property.country}</Text>
-                        </Box>
-                        <Divider />
-                        <Text fontSize="sm" color="gray.500">
-                          Coordinates: {property.latitude?.toFixed(6)}, {property.longitude?.toFixed(6)}
+        {/* Main Content */}
+        <Container maxW="container.xl" py={8}>
+          <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={8}>
+            {/* Left Column - Details */}
+            <GridItem>
+              <VStack spacing={6} align="stretch">
+                {/* Price Card */}
+                <Card bg={cardBg} backdropFilter="blur(10px)" borderWidth="1px" borderColor={cardBorder} shadow="xl">
+                  <CardBody>
+                    <Text fontSize="3xl" fontWeight="bold" color="luxury.gold">
+                      {property.currency} {property.price_min?.toLocaleString()}
+                      {property.price_max && property.price_max !== property.price_min && (
+                        <Text as="span" fontSize="xl" color="gray.500">
+                          {' '}- {property.price_max.toLocaleString()}
                         </Text>
-                      </VStack>
-                    </TabPanel>
-                  </TabPanels>
-                </Tabs>
-              </Card>
-            </VStack>
-          </GridItem>
+                      )}
+                    </Text>
+                  </CardBody>
+                </Card>
 
-          {/* Right Column - Map */}
-          <GridItem>
-            <Box position="sticky" top={4}>
-              <Card bg={cardBg} shadow="md" overflow="hidden">
-                <CardBody p={0}>
-                  <PropertyMap
-                    latitude={property.latitude}
-                    longitude={property.longitude}
-                    zoom={16}
-                    markers={mapMarkers}
-                    height="500px"
-                    onMarkerClick={(markerId) => {
-                      const dwelling = dwellings.find((d) => d.id === markerId)
-                      const area = areas.find((a) => a.id === markerId)
-                      if (dwelling) {
-                        setSelectedEntity({ type: 'dwelling', id: dwelling.id })
-                      } else if (area) {
-                        setSelectedEntity({ type: 'area', id: area.id })
-                      }
-                    }}
-                  />
-                </CardBody>
-              </Card>
+                {/* Description */}
+                <Card bg={cardBg} backdropFilter="blur(10px)" borderWidth="1px" borderColor={cardBorder} shadow="xl">
+                  <CardBody>
+                    <Heading size="md" mb={4}>About This Property</Heading>
+                    <Text fontSize="lg" whiteSpace="pre-wrap">
+                      {property.description || 'No description available.'}
+                    </Text>
+                  </CardBody>
+                </Card>
 
-              {/* Map Legend */}
-              <Card bg={cardBg} shadow="md" mt={4}>
-                <CardBody>
-                  <Text fontWeight="bold" mb={2}>Map Legend</Text>
-                  <VStack align="start" spacing={2}>
-                    <HStack>
-                      <Box w={4} h={4} borderRadius="full" bg="#c9a227" />
-                      <Text fontSize="sm">Property Center</Text>
-                    </HStack>
-                    <HStack>
-                      <Box w={4} h={4} borderRadius="full" bg="#2d3748" />
-                      <Text fontSize="sm">Dwelling</Text>
-                    </HStack>
-                    <HStack>
-                      <Box w={4} h={4} borderRadius="full" bg="#38a169" />
-                      <Text fontSize="sm">Outdoor Area</Text>
-                    </HStack>
-                  </VStack>
-                </CardBody>
-              </Card>
-            </Box>
-          </GridItem>
-        </Grid>
-      </Container>
+                {/* Tabs for Dwellings, Areas, Location */}
+                <Card bg={cardBg} backdropFilter="blur(10px)" borderWidth="1px" borderColor={cardBorder} shadow="xl" overflow="hidden">
+                  <Tabs colorScheme="brand" isLazy>
+                    <TabList px={4} pt={4}>
+                      <Tab>
+                        <HStack>
+                          <Icon as={FiHome} />
+                          <Text>Dwellings ({dwellings.length})</Text>
+                        </HStack>
+                      </Tab>
+                      <Tab>
+                        <HStack>
+                          <Icon as={FiGrid} />
+                          <Text>Areas ({areas.length})</Text>
+                        </HStack>
+                      </Tab>
+                      <Tab>
+                        <HStack>
+                          <Icon as={FiMapPin} />
+                          <Text>Location</Text>
+                        </HStack>
+                      </Tab>
+                    </TabList>
 
-      {/* Footer */}
-      <Box py={8} textAlign="center" borderTop="1px" borderColor="gray.200">
-        <Text color="gray.500" fontSize="sm">
-          Made with 💗 by{' '}
-          <a href="https://kartoza.com" target="_blank" rel="noopener noreferrer">
-            Kartoza
-          </a>
-          {' | '}
-          <a href="https://github.com/sponsors/timlinux" target="_blank" rel="noopener noreferrer">
-            Donate!
-          </a>
-          {' | '}
-          <a href="https://github.com/timlinux/PropertyForSale" target="_blank" rel="noopener noreferrer">
-            GitHub
-          </a>
-        </Text>
+                    <TabPanels>
+                      {/* Dwellings Tab */}
+                      <TabPanel>
+                        {dwellings.length === 0 ? (
+                          <Text color="gray.500">No dwellings listed yet.</Text>
+                        ) : (
+                          <VStack spacing={4} align="stretch">
+                            {dwellings.map((dwelling) => (
+                              <DwellingCard
+                                key={dwelling.id}
+                                dwelling={dwelling}
+                                isSelected={selectedEntity?.id === dwelling.id}
+                                onClick={() => setSelectedEntity(
+                                  selectedEntity?.id === dwelling.id ? null : { type: 'dwelling', id: dwelling.id, name: dwelling.name }
+                                )}
+                                media={getEntityMedia('dwelling', dwelling.id)}
+                              />
+                            ))}
+                          </VStack>
+                        )}
+                      </TabPanel>
+
+                      {/* Areas Tab */}
+                      <TabPanel>
+                        {areas.length === 0 ? (
+                          <Text color="gray.500">No areas listed yet.</Text>
+                        ) : (
+                          <VStack spacing={4} align="stretch">
+                            {areas.map((area) => (
+                              <AreaCard
+                                key={area.id}
+                                area={area}
+                                isSelected={selectedEntity?.id === area.id}
+                                onClick={() => setSelectedEntity(
+                                  selectedEntity?.id === area.id ? null : { type: 'area', id: area.id, name: area.name }
+                                )}
+                                media={getEntityMedia('area', area.id)}
+                              />
+                            ))}
+                          </VStack>
+                        )}
+                      </TabPanel>
+
+                      {/* Location Tab */}
+                      <TabPanel>
+                        <VStack spacing={4} align="stretch">
+                          <Box>
+                            <Text fontWeight="bold">{property.address_line1}</Text>
+                            {property.address_line2 && <Text>{property.address_line2}</Text>}
+                            <Text>
+                              {property.city}, {property.state} {property.postal_code}
+                            </Text>
+                            <Text>{property.country}</Text>
+                          </Box>
+                          <Divider />
+                          <Text fontSize="sm" color="gray.500">
+                            Coordinates: {property.latitude?.toFixed(6)}, {property.longitude?.toFixed(6)}
+                          </Text>
+                        </VStack>
+                      </TabPanel>
+                    </TabPanels>
+                  </Tabs>
+                </Card>
+
+                {/* Image Gallery Thumbnails */}
+                {propertyImages.length > 0 && (
+                  <Card bg={cardBg} backdropFilter="blur(10px)" borderWidth="1px" borderColor={cardBorder} shadow="xl">
+                    <CardBody>
+                      <Heading size="md" mb={4}>Gallery ({propertyImages.length} photos)</Heading>
+                      <SimpleGrid columns={{ base: 3, md: 4, lg: 5 }} spacing={2}>
+                        {propertyImages.map((img, idx) => (
+                          <AspectRatio key={img.id || idx} ratio={1}>
+                            <Image
+                              src={img.url}
+                              alt={img.file_name || `Photo ${idx + 1}`}
+                              objectFit="cover"
+                              borderRadius="md"
+                              cursor="pointer"
+                              opacity={backgroundImage === img.url ? 1 : 0.7}
+                              border={backgroundImage === img.url ? '3px solid' : 'none'}
+                              borderColor="luxury.gold"
+                              _hover={{ opacity: 1 }}
+                              transition="all 0.2s"
+                              onClick={() => setSelectedEntity(null)}
+                            />
+                          </AspectRatio>
+                        ))}
+                      </SimpleGrid>
+                    </CardBody>
+                  </Card>
+                )}
+              </VStack>
+            </GridItem>
+
+            {/* Right Column - Map */}
+            <GridItem>
+              <Box position="sticky" top={4}>
+                <Card bg={cardBg} backdropFilter="blur(10px)" borderWidth="1px" borderColor={cardBorder} shadow="xl" overflow="hidden">
+                  <CardBody p={0}>
+                    <PropertyMap
+                      latitude={property.latitude}
+                      longitude={property.longitude}
+                      zoom={16}
+                      markers={mapMarkers}
+                      height="400px"
+                      onMarkerClick={(markerId) => {
+                        const dwelling = dwellings.find((d) => d.id === markerId)
+                        const area = areas.find((a) => a.id === markerId)
+                        if (dwelling) {
+                          setSelectedEntity({ type: 'dwelling', id: dwelling.id, name: dwelling.name })
+                        } else if (area) {
+                          setSelectedEntity({ type: 'area', id: area.id, name: area.name })
+                        }
+                      }}
+                    />
+                  </CardBody>
+                </Card>
+
+                {/* Map Legend */}
+                <Card bg={cardBg} backdropFilter="blur(10px)" borderWidth="1px" borderColor={cardBorder} shadow="xl" mt={4}>
+                  <CardBody>
+                    <Text fontWeight="bold" mb={2}>Map Legend</Text>
+                    <VStack align="start" spacing={2}>
+                      <HStack>
+                        <Box w={4} h={4} borderRadius="full" bg="#c9a227" />
+                        <Text fontSize="sm">Property Center</Text>
+                      </HStack>
+                      <HStack>
+                        <Box w={4} h={4} borderRadius="full" bg="#2d3748" />
+                        <Text fontSize="sm">Dwelling</Text>
+                      </HStack>
+                      <HStack>
+                        <Box w={4} h={4} borderRadius="full" bg="#38a169" />
+                        <Text fontSize="sm">Outdoor Area</Text>
+                      </HStack>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              </Box>
+            </GridItem>
+          </Grid>
+        </Container>
+
+        {/* Footer */}
+        <Box py={8} textAlign="center">
+          <Text color="whiteAlpha.700" fontSize="sm">
+            Made with 💗 by{' '}
+            <a href="https://kartoza.com" target="_blank" rel="noopener noreferrer" style={{ color: '#c9a227' }}>
+              Kartoza
+            </a>
+            {' | '}
+            <a href="https://github.com/sponsors/timlinux" target="_blank" rel="noopener noreferrer" style={{ color: '#c9a227' }}>
+              Donate!
+            </a>
+            {' | '}
+            <a href="https://github.com/timlinux/PropertyForSale" target="_blank" rel="noopener noreferrer" style={{ color: '#c9a227' }}>
+              GitHub
+            </a>
+          </Text>
+        </Box>
       </Box>
     </Box>
   )
@@ -467,6 +579,7 @@ function DwellingCard({ dwelling, isSelected, onClick, media }: DwellingCardProp
       borderColor={isSelected ? selectedBorder : borderColor}
       cursor="pointer"
       transition="all 0.2s"
+      bg={isSelected ? 'blackAlpha.200' : 'transparent'}
       _hover={{ borderColor: selectedBorder, shadow: 'md' }}
       onClick={onClick}
     >
@@ -549,6 +662,7 @@ function AreaCard({ area, isSelected, onClick, media }: AreaCardProps) {
       borderColor={isSelected ? selectedBorder : borderColor}
       cursor="pointer"
       transition="all 0.2s"
+      bg={isSelected ? 'blackAlpha.200' : 'transparent'}
       _hover={{ borderColor: selectedBorder, shadow: 'md' }}
       onClick={onClick}
     >
