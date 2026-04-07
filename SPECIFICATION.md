@@ -80,6 +80,8 @@ and sales conversion.
 | US-005 | As a visitor, I want to view 360-degree video tours | Video player supports interactive 360 viewing with hotspots |
 | US-006 | As a visitor, I want to view floor plans in 2D and 3D | Floor plan viewer supports both modes with room labels |
 | US-007 | As a visitor, I want ambient audio when viewing property areas | Audio autoplays (with user permission) when entering content sections |
+| US-008 | As a visitor, I want an immersive full-screen property explorer | Full-screen media viewer with auto-hiding UI, swipe/keyboard navigation, ripple transitions between images, quick-jump search panel (/ key), filmstrip thumbnail view (f key), info overlay (i key), and touch gesture support |
+| US-009 | As a visitor, I want to navigate between property components in explorer | Tree-style navigation through property → dwellings → rooms and property → areas with keyboard shortcuts (arrow keys, Shift+Up to go up hierarchy) |
 
 ### 3.2 Authentication
 
@@ -100,6 +102,8 @@ and sales conversion.
 | US-024 | As an agent, I want to upload media to any entity | Support for images, videos, 360 videos, audio, documents, 3D models |
 | US-025 | As an agent, I want to set media autoplay behavior | Configure which media autoplays when section is viewed |
 | US-026 | As an agent, I want to upload CAD files for floor plans | CAD to glTF conversion for 2D/3D viewing |
+| US-027 | As an agent, I want to star/favorite media items | Toggle star on images to prioritize them in slideshows and explorer views, starred images appear first |
+| US-028 | As a visitor, I want starred images to auto-rotate as background | Property pages display starred images in timed slideshow with ripple transition effects |
 
 ### 3.4 Content Management
 
@@ -372,3 +376,4 @@ All endpoints prefixed with `/api/v1/`
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1.0 | 2026-04-04 | System | Initial specification |
+| 0.2.0 | 2026-04-07 | System | Added immersive PropertyExplorer with auto-hiding UI, touch gestures, ripple transitions, quick-jump search, filmstrip view; Added media starring feature with slideshow functionality; Made explorer the primary entry point from property cards |
