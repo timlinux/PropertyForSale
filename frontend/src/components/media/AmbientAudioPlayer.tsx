@@ -49,8 +49,9 @@ export default function AmbientAudioPlayer({
     // Always loop for ambient soundscapes
     audio.loop = true
 
-    if (autoplay && activeTrack.autoplay) {
+    if (autoplay) {
       // Autoplay is restricted by browsers, need user interaction first
+      // For starred audio (ambient soundscapes), always try to autoplay
       const playPromise = audio.play()
       if (playPromise !== undefined) {
         playPromise

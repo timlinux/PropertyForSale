@@ -97,6 +97,7 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 			properties.GET("/:slug/dwellings", handlers.Property.ListDwellings)
 			properties.GET("/:slug/areas", handlers.Property.ListAreas)
 			properties.GET("/:slug/media", handlers.Property.ListMedia)
+			properties.GET("/:slug/quotes", handlers.Property.ListQuotes)
 		}
 
 		// Property routes (authenticated)
@@ -157,6 +158,16 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 			media.PUT("/:id", handlers.Media.Update)
 			media.DELETE("/:id", handlers.Media.Delete)
 			media.POST("/:id/star", handlers.Media.ToggleStar)
+		}
+
+		// Quote routes (authenticated)
+		quotes := v1.Group("/quotes")
+		quotes.Use(middleware.RequireAuth(cfg))
+		{
+			quotes.POST("", handlers.Quote.Create)
+			quotes.GET("/:id", handlers.Quote.Get)
+			quotes.PUT("/:id", handlers.Quote.Update)
+			quotes.DELETE("/:id", handlers.Quote.Delete)
 		}
 
 		// Serve media files

@@ -49,7 +49,7 @@ import {
 } from '@chakra-ui/react'
 import { FiPlus, FiTrash2, FiHome, FiLayers, FiMapPin, FiStar } from 'react-icons/fi'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, Property, Dwelling, Room, Area } from '../../api'
+import { api, Property, Dwelling, Room, Area, Quote } from '../../api'
 import { useAuthHeaders } from '../../context/authStore'
 import { MediaPreviewCard } from '../media'
 
@@ -100,6 +100,7 @@ export default function PropertyEdit() {
           <Tab>Dwellings & Rooms</Tab>
           <Tab>Outdoor Areas</Tab>
           <Tab>Media</Tab>
+          <Tab>Quotes</Tab>
         </TabList>
 
         <TabPanels>
@@ -114,6 +115,9 @@ export default function PropertyEdit() {
           </TabPanel>
           <TabPanel px={0}>
             <MediaTab property={property} />
+          </TabPanel>
+          <TabPanel px={0}>
+            <QuotesTab property={property} />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -1300,5 +1304,175 @@ function AreaModal({
         </ModalFooter>
       </ModalContent>
     </Modal>
+  )
+}
+
+// Quotes Tab
+function QuotesTab({ property }: { property: Property }) {
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [newQuoteText, setNewQuoteText] = useState('')
+  const [editingQuote, setEditingQuote] = useState<Quote | null>(null)
+
+  const { data: quotesData, isLoading } = useQuery({
+    queryKey: ['property-quotes', property.slug],
+    queryFn: () => api.getPropertyQuotes(property.slug),
+  })
+
+  const quotes = quotesData?.data || []
+
+  const createMutation = useMutation({
+    mutationFn: (text: string) =>
+      api.createQuote({
+        property_id: property.id,
+        text,
+        sort_order: quotes.length,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['property-quotes', property.slug] })
+      setNewQuoteText('')
+      toast({ title: 'Quote added', status: 'success', duration: 2000 })
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to add quote', description: error.message, status: 'error' })
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, text }: { id: string; text: string }) =>
+      api.updateQuote(id, { text }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['property-quotes', property.slug] })
+      setEditingQuote(null)
+      toast({ title: 'Quote updated', status: 'success', duration: 2000 })
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to update quote', description: error.message, status: 'error' })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteQuote(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['property-quotes', property.slug] })
+      toast({ title: 'Quote deleted', status: 'success', duration: 2000 })
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to delete quote', description: error.message, status: 'error' })
+    },
+  })
+
+  const handleAddQuote = () => {
+    if (newQuoteText.trim()) {
+      createMutation.mutate(newQuoteText.trim())
+    }
+  }
+
+  const handleUpdateQuote = () => {
+    if (editingQuote && editingQuote.text.trim()) {
+      updateMutation.mutate({ id: editingQuote.id, text: editingQuote.text.trim() })
+    }
+  }
+
+  return (
+    <VStack spacing={6} align="stretch">
+      <Card>
+        <CardHeader>
+          <Heading size="md">Property Quotes</Heading>
+          <Text fontSize="sm" color="gray.500" mt={1}>
+            Promotional taglines displayed over the property images (cycles every 15 seconds)
+          </Text>
+        </CardHeader>
+        <CardBody>
+          {/* Add new quote */}
+          <HStack mb={6}>
+            <Input
+              placeholder='e.g., "Jewel of the Alentejo"'
+              value={newQuoteText}
+              onChange={(e) => setNewQuoteText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddQuote()}
+            />
+            <IconButton
+              aria-label="Add quote"
+              icon={<FiPlus />}
+              colorScheme="blue"
+              onClick={handleAddQuote}
+              isLoading={createMutation.isPending}
+              isDisabled={!newQuoteText.trim()}
+            />
+          </HStack>
+
+          {/* Existing quotes list */}
+          {isLoading ? (
+            <Center py={8}>
+              <Spinner />
+            </Center>
+          ) : quotes.length === 0 ? (
+            <Text color="gray.500" textAlign="center" py={8}>
+              No quotes yet. Add some promotional taglines above.
+            </Text>
+          ) : (
+            <VStack spacing={3} align="stretch">
+              {quotes.map((quote, index) => (
+                <Card key={quote.id} variant="outline">
+                  <CardBody py={3}>
+                    {editingQuote?.id === quote.id ? (
+                      <HStack>
+                        <Input
+                          value={editingQuote.text}
+                          onChange={(e) => setEditingQuote({ ...editingQuote, text: e.target.value })}
+                          onKeyPress={(e) => e.key === 'Enter' && handleUpdateQuote()}
+                          autoFocus
+                        />
+                        <IconButton
+                          aria-label="Save"
+                          icon={<FiStar />}
+                          colorScheme="green"
+                          size="sm"
+                          onClick={handleUpdateQuote}
+                          isLoading={updateMutation.isPending}
+                        />
+                        <IconButton
+                          aria-label="Cancel"
+                          icon={<FiTrash2 />}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingQuote(null)}
+                        />
+                      </HStack>
+                    ) : (
+                      <HStack justify="space-between">
+                        <HStack>
+                          <Badge colorScheme="blue" fontSize="xs">{index + 1}</Badge>
+                          <Text fontStyle="italic" fontSize="lg">"{quote.text}"</Text>
+                        </HStack>
+                        <HStack>
+                          <IconButton
+                            aria-label="Edit quote"
+                            icon={<FiLayers />}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingQuote(quote)}
+                          />
+                          <IconButton
+                            aria-label="Delete quote"
+                            icon={<FiTrash2 />}
+                            variant="ghost"
+                            colorScheme="red"
+                            size="sm"
+                            onClick={() => deleteMutation.mutate(quote.id)}
+                            isLoading={deleteMutation.isPending}
+                          />
+                        </HStack>
+                      </HStack>
+                    )}
+                  </CardBody>
+                </Card>
+              ))}
+            </VStack>
+          )}
+        </CardBody>
+      </Card>
+    </VStack>
   )
 }

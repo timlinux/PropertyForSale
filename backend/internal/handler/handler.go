@@ -22,12 +22,13 @@ type Handlers struct {
 	ABTest    *ABTestHandler
 	SEO       *SEOHandler
 	Page      *PageHandler
+	Quote     *QuoteHandler
 }
 
 // NewHandlers creates a new Handlers instance with all implementations
 func NewHandlers(services *service.Services, repos *repository.Repositories, cfg *config.Config, isDev bool) *Handlers {
 	return &Handlers{
-		Property:  NewPropertyHandler(services.Property, services.Dwelling, services.Room, services.Area, services.Media),
+		Property:  NewPropertyHandler(services.Property, services.Dwelling, services.Room, services.Area, services.Media, services.Quote),
 		Dwelling:  NewDwellingHandler(services.Dwelling, services.Room),
 		Room:      NewRoomHandler(services.Room),
 		Area:      NewAreaHandler(services.Area),
@@ -38,5 +39,6 @@ func NewHandlers(services *service.Services, repos *repository.Repositories, cfg
 		ABTest:    NewABTestHandler(repos.Analytics),
 		SEO:       NewSEOHandler(repos.Property, cfg),
 		Page:      NewPageHandler(repos.Page),
+		Quote:     NewQuoteHandler(services.Quote),
 	}
 }

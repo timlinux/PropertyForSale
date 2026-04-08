@@ -49,6 +49,7 @@ import PropertyMap from '../components/map/PropertyMap'
 import { AmbientAudioPlayer } from '../components/media'
 import { usePageTracking } from '../hooks/usePageTracking'
 import { SEOHead } from '../components/common/SEOHead'
+import QuoteOverlay from '../components/property/QuoteOverlay'
 
 export default function PropertyPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -90,9 +91,16 @@ export default function PropertyPage() {
     enabled: !!property?.slug,
   })
 
+  const { data: quotesData } = useQuery({
+    queryKey: ['property-quotes', property?.slug],
+    queryFn: () => api.getPropertyQuotes(property!.slug),
+    enabled: !!property?.slug,
+  })
+
   const dwellings = dwellingsData?.data || []
   const areas = areasData?.data || []
   const allMedia = mediaData?.data || []
+  const quotes = quotesData?.data || []
 
   // Track property views for analytics
   usePageTracking({ propertyId: property?.id })
@@ -406,6 +414,11 @@ export default function PropertyPage() {
               bottom={0}
               bg="blackAlpha.500"
             />
+
+            {/* Quote overlay */}
+            {quotes.length > 0 && (
+              <QuoteOverlay quotes={quotes} interval={15000} />
+            )}
           </>
         ) : (
           <Box

@@ -21,6 +21,7 @@ type PropertyHandler struct {
 	roomSvc     *service.RoomService
 	areaSvc     *service.AreaService
 	mediaSvc    *service.MediaService
+	quoteSvc    *service.QuoteService
 }
 
 // NewPropertyHandler creates a new property handler
@@ -30,6 +31,7 @@ func NewPropertyHandler(
 	roomSvc *service.RoomService,
 	areaSvc *service.AreaService,
 	mediaSvc *service.MediaService,
+	quoteSvc *service.QuoteService,
 ) *PropertyHandler {
 	return &PropertyHandler{
 		propertySvc: propertySvc,
@@ -37,6 +39,7 @@ func NewPropertyHandler(
 		roomSvc:     roomSvc,
 		areaSvc:     areaSvc,
 		mediaSvc:    mediaSvc,
+		quoteSvc:    quoteSvc,
 	}
 }
 
@@ -299,6 +302,27 @@ func (h *PropertyHandler) ListMedia(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": allMedia})
+}
+
+// ListQuotes handles GET /api/v1/properties/:slug/quotes
+func (h *PropertyHandler) ListQuotes(c *gin.Context) {
+	slug := c.Param("slug")
+	ctx := c.Request.Context()
+
+	// Look up property by slug to get the ID
+	property, err := h.propertySvc.GetBySlug(ctx, slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "property not found"})
+		return
+	}
+
+	quotes, err := h.quoteSvc.ListByPropertyID(ctx, property.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": quotes})
 }
 
 func getIntQuery(c *gin.Context, key string, defaultValue int) int {

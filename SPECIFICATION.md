@@ -109,6 +109,8 @@ and sales conversion.
 | US-030b | As an agent, I want starred audio files to play as looping soundscapes | Only starred audio files play as ambient soundscapes, looping continuously for immersive experience |
 | US-031a | As a visitor, I want to preview videos on hover in the media gallery | Hovering over video thumbnails plays the video muted, returning to thumbnail when mouse leaves |
 | US-031b | As a visitor, I want to preview audio on hover in the media gallery | Hovering over audio items plays a preview with visual feedback (pulse animation) |
+| US-032 | As an agent, I want to create promotional quotes for my property | Add/edit/delete taglines like "Jewel of the Alentejo" via Quotes tab in property editor |
+| US-033 | As a visitor, I want to see promotional quotes overlaid on property images | Large italic text quotes cycle every 15 seconds with fade transitions over the background images |
 
 ### 3.4 Content Management
 

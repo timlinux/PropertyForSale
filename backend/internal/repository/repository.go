@@ -14,6 +14,7 @@ import (
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/notification"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/page"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/property"
+	"github.com/timlinux/PropertyForSale/backend/internal/domain/quote"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/user"
 	"gorm.io/gorm"
 )
@@ -30,6 +31,7 @@ type Repositories struct {
 	Content      ContentRepository
 	Page         PageRepository
 	Notification NotificationRepository
+	Quote        QuoteRepository
 }
 
 // NewRepositories creates a new Repositories instance with all implementations
@@ -45,6 +47,7 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		Content:      NewContentRepository(db),
 		Page:         NewPageRepository(db),
 		Notification: NewNotificationRepository(db),
+		Quote:        NewQuoteRepository(db),
 	}
 }
 
@@ -91,6 +94,15 @@ type MediaRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*media.Media, error)
 	ListByEntity(ctx context.Context, entityType media.EntityType, entityID uuid.UUID) ([]media.Media, error)
 	Update(ctx context.Context, m *media.Media) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// QuoteRepository defines quote data access operations
+type QuoteRepository interface {
+	Create(ctx context.Context, q *quote.Quote) error
+	GetByID(ctx context.Context, id uuid.UUID) (*quote.Quote, error)
+	ListByPropertyID(ctx context.Context, propertyID uuid.UUID) ([]quote.Quote, error)
+	Update(ctx context.Context, q *quote.Quote) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 

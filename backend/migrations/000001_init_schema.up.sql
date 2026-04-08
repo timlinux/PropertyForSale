@@ -239,6 +239,18 @@ CREATE TABLE ab_variants (
 
 CREATE INDEX idx_ab_variants_test_id ON ab_variants(ab_test_id);
 
+-- Property quotes table (promotional taglines)
+CREATE TABLE property_quotes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_property_quotes_property_id ON property_quotes(property_id);
+
 -- Updated at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -286,5 +298,10 @@ CREATE TRIGGER trigger_ab_tests_updated_at
 
 CREATE TRIGGER trigger_ab_variants_updated_at
     BEFORE UPDATE ON ab_variants
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_property_quotes_updated_at
+    BEFORE UPDATE ON property_quotes
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();

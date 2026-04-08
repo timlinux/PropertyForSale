@@ -18,6 +18,7 @@ type Services struct {
 	Auth      *AuthService
 	Analytics *AnalyticsService
 	Content   *ContentService
+	Quote     *QuoteService
 }
 
 // NewServices creates a new Services instance with all implementations
@@ -32,5 +33,6 @@ func NewServices(repos *repository.Repositories, _ interface{}, cfg *config.Conf
 		Auth:      NewAuthService(repos.User, cfg),
 		Analytics: NewAnalyticsService(repos.Analytics, cfg),
 		Content:   NewContentService(repos.Content, repos.Property),
+		Quote:     NewQuoteService(repos.Quote),
 	}
 }

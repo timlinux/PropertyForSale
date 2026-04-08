@@ -97,6 +97,15 @@ export interface Media {
   updated_at: string
 }
 
+export interface Quote {
+  id: string
+  property_id: string
+  text: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
 export interface User {
   id: string
   email: string
@@ -452,6 +461,30 @@ export const api = {
 
   deleteMedia: (id: string) =>
     fetchAPI<void>(`/media/${id}`, {
+      method: 'DELETE',
+      requireAuth: true,
+    }),
+
+  // Quotes
+  getPropertyQuotes: (propertySlug: string) =>
+    fetchAPI<{ data: Quote[] }>(`/properties/${propertySlug}/quotes`),
+
+  createQuote: (data: { property_id: string; text: string; sort_order?: number }) =>
+    fetchAPI<Quote>('/quotes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  updateQuote: (id: string, data: { text?: string; sort_order?: number }) =>
+    fetchAPI<Quote>(`/quotes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      requireAuth: true,
+    }),
+
+  deleteQuote: (id: string) =>
+    fetchAPI<void>(`/quotes/${id}`, {
       method: 'DELETE',
       requireAuth: true,
     }),
