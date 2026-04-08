@@ -16,6 +16,7 @@ import (
 	"github.com/timlinux/PropertyForSale/backend/internal/config"
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/media"
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
+	"github.com/timlinux/PropertyForSale/backend/pkg/thumbnailer"
 	"github.com/timlinux/PropertyForSale/backend/pkg/types"
 )
 
@@ -24,6 +25,7 @@ type MediaService struct {
 	mediaRepo   repository.MediaRepository
 	storagePath string
 	cfg         *config.Config
+	thumbnailer *thumbnailer.Thumbnailer
 }
 
 // NewMediaService creates a new media service
@@ -33,10 +35,17 @@ func NewMediaService(mediaRepo repository.MediaRepository, cfg *config.Config) *
 		fmt.Printf("Warning: failed to create storage directory: %v\n", err)
 	}
 
+	// Initialize thumbnailer (optional - will be nil if ffmpeg not available)
+	th, err := thumbnailer.New()
+	if err != nil {
+		fmt.Printf("Warning: thumbnail generation unavailable: %v\n", err)
+	}
+
 	return &MediaService{
 		mediaRepo:   mediaRepo,
 		storagePath: cfg.Storage.Path,
 		cfg:         cfg,
+		thumbnailer: th,
 	}
 }
 
@@ -98,6 +107,36 @@ func (s *MediaService) Upload(ctx context.Context, input UploadInput) (*media.Me
 		Autoplay:   input.Autoplay,
 		CreatedAt:  now,
 		UpdatedAt:  now,
+	}
+
+	// Generate thumbnail and extract metadata for video files
+	if thumbnailer.IsVideoFile(input.MimeType) && s.thumbnailer != nil {
+		thumbnailPath := filepath.Join(
+			s.storagePath,
+			string(input.EntityType),
+			input.EntityID.String(),
+			fileID+"_thumb.jpg",
+		)
+
+		// Generate thumbnail (non-blocking - continue even if it fails)
+		if err := s.thumbnailer.GenerateVideoThumbnail(ctx, fullPath, thumbnailPath); err != nil {
+			fmt.Printf("Warning: failed to generate video thumbnail: %v\n", err)
+		} else {
+			// Set thumbnail URL
+			thumbnailRelPath := filepath.Join(
+				string(input.EntityType),
+				input.EntityID.String(),
+				fileID+"_thumb.jpg",
+			)
+			m.ThumbnailURL = fmt.Sprintf("/api/v1/media/files/%s", thumbnailRelPath)
+		}
+
+		// Extract video metadata
+		if meta, err := s.thumbnailer.GetVideoMetadata(ctx, fullPath); err == nil {
+			m.Duration = meta.Duration
+			m.Width = meta.Width
+			m.Height = meta.Height
+		}
 	}
 
 	if err := s.mediaRepo.Create(ctx, m); err != nil {

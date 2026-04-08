@@ -46,7 +46,8 @@ export default function AmbientAudioPlayer({
 
     audio.volume = isMuted ? 0 : volume
     audio.src = activeTrack.url
-    audio.loop = audioTracks.length === 1
+    // Always loop for ambient soundscapes
+    audio.loop = true
 
     if (autoplay && activeTrack.autoplay) {
       // Autoplay is restricted by browsers, need user interaction first

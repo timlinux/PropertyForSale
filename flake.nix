@@ -199,6 +199,9 @@
             # CAD/3D conversion tools
             openscad
             assimp
+
+            # Video/Image processing for thumbnails
+            ffmpeg
           ] ++ [
             # Scripts
             pgStartScript

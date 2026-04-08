@@ -51,6 +51,7 @@ import { FiPlus, FiTrash2, FiHome, FiLayers, FiMapPin, FiStar } from 'react-icon
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, Property, Dwelling, Room, Area } from '../../api'
 import { useAuthHeaders } from '../../context/authStore'
+import { MediaPreviewCard } from '../media'
 
 export default function PropertyEdit() {
   const { slug } = useParams<{ slug: string }>()
@@ -775,17 +776,6 @@ function MediaTab({ property }: { property: Property }) {
     handleFileUpload(e.dataTransfer.files)
   }
 
-  const getMediaIcon = (type: string) => {
-    switch (type) {
-      case 'image': return '🖼️'
-      case 'video': return '🎬'
-      case 'video360': return '🌐'
-      case 'audio': return '🔊'
-      case 'model3d': return '📦'
-      default: return '📄'
-    }
-  }
-
   const getEntityLabel = (entityType: string, entityId: string) => {
     if (entityType === 'property') return 'Property'
     if (entityType === 'dwelling') {
@@ -937,40 +927,23 @@ function MediaTab({ property }: { property: Property }) {
               {filteredMedia.map((item) => (
                 <Card key={item.id} position="relative" overflow="hidden" variant="outline">
                   <CardBody p={0}>
-                    {item.type === 'image' ? (
-                      <Box position="relative">
+                    <Box position="relative">
+                      <MediaPreviewCard media={item} height="150px" />
+                      {/* Star indicator overlay for starred items */}
+                      {item.starred && (
                         <Box
-                          as="img"
-                          src={item.thumbnail_url || item.url}
-                          alt={item.file_name}
-                          w="100%"
-                          h="150px"
-                          objectFit="cover"
-                        />
-                        {/* Star indicator overlay */}
-                        {item.starred && (
-                          <Box
-                            position="absolute"
-                            top={1}
-                            left={1}
-                            bg="yellow.400"
-                            borderRadius="full"
-                            p={1}
-                          >
-                            <FiStar size={14} color="white" fill="white" />
-                          </Box>
-                        )}
-                      </Box>
-                    ) : (
-                      <Center h="150px" bg="gray.100">
-                        <VStack>
-                          <Text fontSize="3xl">{getMediaIcon(item.type)}</Text>
-                          <Text fontSize="xs" color="gray.500" textTransform="uppercase">
-                            {item.type}
-                          </Text>
-                        </VStack>
-                      </Center>
-                    )}
+                          position="absolute"
+                          top={1}
+                          left={1}
+                          bg="yellow.400"
+                          borderRadius="full"
+                          p={1}
+                          zIndex={1}
+                        >
+                          <FiStar size={14} color="white" fill="white" />
+                        </Box>
+                      )}
+                    </Box>
                     <Box p={2}>
                       <Text fontSize="xs" noOfLines={1} title={item.file_name}>
                         {item.file_name}
@@ -980,9 +953,10 @@ function MediaTab({ property }: { property: Property }) {
                           {(item.file_size / 1024 / 1024).toFixed(2)} MB
                         </Text>
                         <HStack spacing={1}>
-                          {item.type === 'image' && (
+                          {/* Allow starring images and audio files */}
+                          {(item.type === 'image' || item.type === 'audio') && (
                             <IconButton
-                              aria-label={item.starred ? 'Remove star' : 'Star image'}
+                              aria-label={item.starred ? 'Remove star' : `Star ${item.type}`}
                               icon={<FiStar fill={item.starred ? 'currentColor' : 'none'} />}
                               size="xs"
                               colorScheme={item.starred ? 'yellow' : 'gray'}

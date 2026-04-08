@@ -87,6 +87,9 @@ export interface Media {
   file_name: string
   file_size: number
   mime_type: string
+  width?: number
+  height?: number
+  duration?: number  // For video/audio in seconds
   autoplay: boolean
   starred: boolean
   sort_order: number

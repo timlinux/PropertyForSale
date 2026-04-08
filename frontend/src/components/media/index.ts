@@ -4,3 +4,4 @@
 export { default as MediaGallery } from './MediaGallery'
 export { default as VideoPlayer } from './VideoPlayer'
 export { default as AmbientAudioPlayer } from './AmbientAudioPlayer'
+export { default as MediaPreviewCard } from './MediaPreviewCard'

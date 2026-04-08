@@ -102,8 +102,9 @@ export default function PropertyPage() {
     () => allMedia.filter((m) => m.entity_type === 'property' && m.type === 'image'),
     [allMedia]
   )
+  // Only include starred audio as ambient soundscapes
   const audioTracks = useMemo(
-    () => allMedia.filter((m) => m.type === 'audio'),
+    () => allMedia.filter((m) => m.type === 'audio' && m.starred),
     [allMedia]
   )
 

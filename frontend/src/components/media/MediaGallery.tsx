@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Tim Sutton <tim@kartoza.com>
 // SPDX-License-Identifier: EUPL-1.2
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   Box,
   Grid,
@@ -18,6 +18,7 @@ import {
   HStack,
   Text,
   Badge,
+  Icon,
 } from '@chakra-ui/react'
 import { FiChevronLeft, FiChevronRight, FiPlay, FiVolume2 } from 'react-icons/fi'
 import type { Media } from '../../api'
@@ -91,23 +92,9 @@ export default function MediaGallery({ media, onMediaClick: _onMediaClick }: Med
           position="relative"
           cursor="pointer"
           onClick={() => openLightbox(0)}
-          _hover={{ '& img': { transform: 'scale(1.05)' } }}
           overflow="hidden"
         >
-          <Image
-            src={allVisualMedia[0]?.url || allVisualMedia[0]?.thumbnail_url}
-            alt={allVisualMedia[0]?.file_name || 'Property image'}
-            objectFit="cover"
-            w="100%"
-            h="100%"
-            transition="transform 0.3s"
-          />
-          {allVisualMedia[0]?.type === 'video' && (
-            <MediaBadge icon={FiPlay} label="Video" />
-          )}
-          {allVisualMedia[0]?.type === 'video360' && (
-            <MediaBadge icon={FiPlay} label="360°" />
-          )}
+          <GalleryItem media={allVisualMedia[0]} />
         </GridItem>
 
         {/* Secondary Images */}
@@ -117,19 +104,9 @@ export default function MediaGallery({ media, onMediaClick: _onMediaClick }: Med
             position="relative"
             cursor="pointer"
             onClick={() => openLightbox(index + 1)}
-            _hover={{ '& img': { transform: 'scale(1.05)' } }}
             overflow="hidden"
           >
-            <Image
-              src={item.thumbnail_url || item.url}
-              alt={item.file_name || `Image ${index + 2}`}
-              objectFit="cover"
-              w="100%"
-              h="100%"
-              transition="transform 0.3s"
-            />
-            {item.type === 'video' && <MediaBadge icon={FiPlay} label="Video" />}
-            {item.type === 'video360' && <MediaBadge icon={FiPlay} label="360°" />}
+            <GalleryItem media={item} />
 
             {/* Show more overlay on last item */}
             {index === 3 && allVisualMedia.length > 5 && (
@@ -140,6 +117,7 @@ export default function MediaGallery({ media, onMediaClick: _onMediaClick }: Med
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
+                zIndex={2}
               >
                 <Text color="white" fontSize="xl" fontWeight="bold">
                   +{allVisualMedia.length - 5} more
@@ -240,27 +218,106 @@ export default function MediaGallery({ media, onMediaClick: _onMediaClick }: Med
   )
 }
 
-interface MediaBadgeProps {
-  icon: React.ElementType
-  label: string
+// Gallery item with hover preview for videos
+interface GalleryItemProps {
+  media: Media
 }
 
-function MediaBadge({ icon: Icon, label }: MediaBadgeProps) {
+function GalleryItem({ media }: GalleryItemProps) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [isHovering, setIsHovering] = useState(false)
+
+  useEffect(() => {
+    if (media.type !== 'video' && media.type !== 'video360') return
+
+    if (isHovering && videoRef.current) {
+      videoRef.current.play().catch(() => {})
+    } else if (videoRef.current) {
+      videoRef.current.pause()
+      videoRef.current.currentTime = 0
+    }
+  }, [isHovering, media.type])
+
+  const isVideo = media.type === 'video' || media.type === 'video360'
+
+  if (isVideo) {
+    return (
+      <Box
+        position="relative"
+        w="100%"
+        h="100%"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
+        {/* Show thumbnail when not hovering, video when hovering */}
+        {media.thumbnail_url && !isHovering ? (
+          <Image
+            src={media.thumbnail_url}
+            alt={media.file_name || 'Video thumbnail'}
+            objectFit="cover"
+            w="100%"
+            h="100%"
+            transition="transform 0.3s"
+            _hover={{ transform: 'scale(1.05)' }}
+          />
+        ) : (
+          <Box
+            as="video"
+            ref={videoRef}
+            src={media.url}
+            w="100%"
+            h="100%"
+            objectFit="cover"
+            muted
+            loop
+            playsInline
+          />
+        )}
+
+        {/* Play icon overlay when not playing */}
+        {!isHovering && (
+          <Box
+            position="absolute"
+            inset={0}
+            bg="blackAlpha.300"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Icon as={FiPlay} boxSize={12} color="white" />
+          </Box>
+        )}
+
+        {/* Video type badge */}
+        <Badge
+          position="absolute"
+          top={2}
+          right={2}
+          bg="blackAlpha.700"
+          color="white"
+          display="flex"
+          alignItems="center"
+          gap={1}
+          px={2}
+          py={1}
+        >
+          <FiPlay />
+          {media.type === 'video360' ? '360°' : 'Video'}
+        </Badge>
+      </Box>
+    )
+  }
+
+  // Regular image
   return (
-    <Badge
-      position="absolute"
-      top={2}
-      right={2}
-      bg="blackAlpha.700"
-      color="white"
-      display="flex"
-      alignItems="center"
-      gap={1}
-      px={2}
-      py={1}
-    >
-      <Icon />
-      {label}
-    </Badge>
+    <Image
+      src={media.url}
+      alt={media.file_name || 'Property image'}
+      objectFit="cover"
+      w="100%"
+      h="100%"
+      transition="transform 0.3s"
+      _hover={{ transform: 'scale(1.05)' }}
+    />
   )
 }

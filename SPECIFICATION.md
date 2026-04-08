@@ -104,6 +104,11 @@ and sales conversion.
 | US-026 | As an agent, I want to upload CAD files for floor plans | CAD to glTF conversion for 2D/3D viewing |
 | US-027 | As an agent, I want to star/favorite media items | Toggle star on images to prioritize them in slideshows and explorer views, starred images appear first |
 | US-028 | As a visitor, I want starred images to auto-rotate as background | Property pages display starred images in timed slideshow with ripple transition effects |
+| US-029 | As an agent, I want video thumbnails generated automatically | When uploading videos, system extracts a frame as JPEG thumbnail and stores video metadata (duration, dimensions) |
+| US-030a | As an agent, I want to upload .m4a audio files for ambient soundscapes | Support audio/mp4 and audio/x-m4a MIME types for ambient audio uploads |
+| US-030b | As an agent, I want starred audio files to play as looping soundscapes | Only starred audio files play as ambient soundscapes, looping continuously for immersive experience |
+| US-031a | As a visitor, I want to preview videos on hover in the media gallery | Hovering over video thumbnails plays the video muted, returning to thumbnail when mouse leaves |
+| US-031b | As a visitor, I want to preview audio on hover in the media gallery | Hovering over audio items plays a preview with visual feedback (pulse animation) |
 
 ### 3.4 Content Management
 
