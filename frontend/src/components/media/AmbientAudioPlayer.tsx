@@ -29,14 +29,12 @@ export default function AmbientAudioPlayer({
   defaultVolume = 0.3,
 }: AmbientAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const currentUrlRef = useRef<string | null>(null)
   const hideTimerRef = useRef<NodeJS.Timeout>()
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(defaultVolume)
   const [isMuted, setIsMuted] = useState(false)
   const [currentTrack, setCurrentTrack] = useState(0)
   const [showVolumeSlider, setShowVolumeSlider] = useState(false)
-  const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
 
@@ -45,7 +43,6 @@ export default function AmbientAudioPlayer({
   const textColor = useColorModeValue('blue.600', 'blue.300')
 
   const activeTrack = audioTracks[currentTrack]
-  const activeTrackUrl = activeTrack?.url
 
   // Auto-hide timer
   const resetHideTimer = useCallback(() => {
@@ -64,8 +61,6 @@ export default function AmbientAudioPlayer({
   useEffect(() => {
     const handleMouseMove = () => resetHideTimer()
     window.addEventListener('mousemove', handleMouseMove)
-
-    // Start the initial hide timer
     resetHideTimer()
 
     return () => {
@@ -74,58 +69,35 @@ export default function AmbientAudioPlayer({
     }
   }, [resetHideTimer])
 
-  // Set up audio source when track changes
+  // Try autoplay when component mounts
   useEffect(() => {
     const audio = audioRef.current
-    if (!audio || !activeTrackUrl) return
+    if (!audio || !autoplay) return
 
-    // Only update source if it's actually different
-    if (currentUrlRef.current !== activeTrackUrl) {
-      currentUrlRef.current = activeTrackUrl
-      audio.src = activeTrackUrl
-      audio.loop = true
-      audio.volume = isMuted ? 0 : volume
-      audio.load()
-    }
-  }, [activeTrackUrl, isMuted, volume])
+    // Small delay to ensure audio element is ready
+    const timer = setTimeout(() => {
+      audio.play()
+        .then(() => {
+          setIsPlaying(true)
+          setAutoplayBlocked(false)
+        })
+        .catch((err) => {
+          console.log('Autoplay blocked:', err.message)
+          setAutoplayBlocked(true)
+        })
+    }, 100)
 
-  // Handle autoplay when track is ready
+    return () => clearTimeout(timer)
+  }, [autoplay, activeTrack?.url])
+
+  // Update volume
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio || !activeTrackUrl) return
-
-    const handleCanPlay = () => {
-      // Try to play if autoplay is enabled or user has already interacted
-      if ((autoplay || hasUserInteracted) && audio.paused) {
-        audio.play()
-          .then(() => {
-            setIsPlaying(true)
-            setAutoplayBlocked(false)
-          })
-          .catch(() => {
-            // Autoplay was prevented - show the prompt
-            setIsPlaying(false)
-            if (autoplay && !hasUserInteracted) {
-              setAutoplayBlocked(true)
-            }
-          })
-      }
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume
     }
+  }, [volume, isMuted])
 
-    // Listen for when audio is ready to play
-    audio.addEventListener('canplaythrough', handleCanPlay)
-
-    // Also try immediately in case audio is already loaded
-    if (audio.readyState >= 4) {
-      handleCanPlay()
-    }
-
-    return () => {
-      audio.removeEventListener('canplaythrough', handleCanPlay)
-    }
-  }, [activeTrackUrl, autoplay, hasUserInteracted])
-
-  // Sync isPlaying state with actual audio state
+  // Sync playing state
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -135,72 +107,54 @@ export default function AmbientAudioPlayer({
       setAutoplayBlocked(false)
     }
     const handlePause = () => setIsPlaying(false)
+    const handleError = (e: Event) => {
+      console.error('Audio error:', e)
+    }
 
     audio.addEventListener('play', handlePlay)
     audio.addEventListener('pause', handlePause)
+    audio.addEventListener('error', handleError)
 
     return () => {
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
+      audio.removeEventListener('error', handleError)
     }
   }, [])
-
-  // Cleanup only on unmount
-  useEffect(() => {
-    const audio = audioRef.current
-    return () => {
-      if (audio) {
-        audio.pause()
-        audio.src = ''
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume
-    }
-  }, [volume, isMuted])
 
   const handlePlayPause = async () => {
     const audio = audioRef.current
-    if (!audio) return
+    if (!audio) {
+      console.error('No audio element')
+      return
+    }
 
-    // Track that user has interacted - allows autoplay on future track changes
-    setHasUserInteracted(true)
     setAutoplayBlocked(false)
 
     if (isPlaying) {
       audio.pause()
-      setIsPlaying(false)
     } else {
       try {
         await audio.play()
         setIsPlaying(true)
       } catch (error) {
-        console.error('Audio playback failed:', error)
+        console.error('Play failed:', error)
       }
     }
   }
 
   const handleTrackEnd = () => {
     if (audioTracks.length > 1) {
-      const nextTrack = (currentTrack + 1) % audioTracks.length
-      setCurrentTrack(nextTrack)
+      setCurrentTrack((currentTrack + 1) % audioTracks.length)
     }
   }
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted)
-  }
+  const toggleMute = () => setIsMuted(!isMuted)
 
   const handleMouseEnter = () => {
     setShowVolumeSlider(true)
     setIsVisible(true)
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current)
-    }
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
   }
 
   const handleMouseLeave = () => {
@@ -208,9 +162,11 @@ export default function AmbientAudioPlayer({
     resetHideTimer()
   }
 
-  if (!audioTracks.length) return null
+  if (!audioTracks.length || !activeTrack) {
+    return null
+  }
 
-  // Show expanded prompt when autoplay is blocked
+  // Show "click to enable" when autoplay blocked
   if (autoplayBlocked && !isPlaying) {
     return (
       <Box
@@ -233,10 +189,13 @@ export default function AmbientAudioPlayer({
         transition="all 0.3s ease-out"
         onMouseEnter={() => setIsVisible(true)}
       >
+        {/* Audio element with src directly set */}
         <audio
           ref={audioRef}
-          onEnded={handleTrackEnd}
+          src={activeTrack.url}
+          loop
           preload="auto"
+          onEnded={handleTrackEnd}
         />
 
         <HStack spacing={3}>
@@ -278,14 +237,16 @@ export default function AmbientAudioPlayer({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+      {/* Audio element with src directly set - same pattern as MediaPreviewCard */}
       <audio
         ref={audioRef}
-        onEnded={handleTrackEnd}
+        src={activeTrack.url}
+        loop
         preload="auto"
+        onEnded={handleTrackEnd}
       />
 
       <HStack spacing={2}>
-        {/* Play/Pause button */}
         <Tooltip
           label={isPlaying ? 'Pause ambient audio' : 'Play ambient audio'}
           hasArrow
@@ -301,7 +262,6 @@ export default function AmbientAudioPlayer({
           />
         </Tooltip>
 
-        {/* Volume controls - shown on hover */}
         {showVolumeSlider && (
           <>
             <IconButton
@@ -332,7 +292,6 @@ export default function AmbientAudioPlayer({
           </>
         )}
 
-        {/* Track indicator */}
         {audioTracks.length > 1 && showVolumeSlider && (
           <Text fontSize="xs" color="gray.500" whiteSpace="nowrap">
             {currentTrack + 1}/{audioTracks.length}
