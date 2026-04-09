@@ -37,6 +37,7 @@ import {
 } from 'react-icons/fi'
 import { api } from '../api'
 import { usePageTracking } from '../hooks/usePageTracking'
+import { AmbientAudioPlayer } from '../components/media'
 
 interface NavigationContext {
   level: 'property' | 'dwelling' | 'room' | 'area'
@@ -116,6 +117,12 @@ export default function PropertyExplorer() {
   const dwellings = dwellingsData?.data || []
   const areas = areasData?.data || []
   const allMedia = mediaData?.data || []
+
+  // Get starred audio tracks for ambient soundscape
+  const audioTracks = useMemo(() =>
+    allMedia.filter((m) => m.type === 'audio' && m.starred),
+    [allMedia]
+  )
 
   // Track views
   usePageTracking({ propertyId: property?.id })
@@ -302,7 +309,7 @@ export default function PropertyExplorer() {
       setIsTransitioning(true)
       setTimeout(() => {
         setIsTransitioning(false)
-      }, 500)
+      }, 4000)
     }
     prevContextRef.current = context
   }, [context, currentMedia, getRandomRippleOrigin])
@@ -316,7 +323,7 @@ export default function PropertyExplorer() {
       setTimeout(() => {
         setMediaIndex(i => i + 1)
         setIsTransitioning(false)
-      }, 500)
+      }, 4000)
     } else if (direction === 'prev' && hasPrevMedia) {
       setNextImageUrl(currentMedia[mediaIndex - 1]?.url || null)
       setRippleOrigin(getRandomRippleOrigin())
@@ -325,7 +332,7 @@ export default function PropertyExplorer() {
       setTimeout(() => {
         setMediaIndex(i => i - 1)
         setIsTransitioning(false)
-      }, 500)
+      }, 4000)
     }
   }, [hasNextMedia, hasPrevMedia, currentMedia, mediaIndex, getRandomRippleOrigin])
 
@@ -339,7 +346,7 @@ export default function PropertyExplorer() {
     setTimeout(() => {
       setMediaIndex(index)
       setIsTransitioning(false)
-    }, 500)
+    }, 4000)
   }, [mediaIndex, currentMedia, getRandomRippleOrigin])
 
   const navigateSibling = useCallback((direction: 'next' | 'prev') => {
@@ -580,6 +587,11 @@ export default function PropertyExplorer() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Ambient Audio Player */}
+      {audioTracks.length > 0 && (
+        <AmbientAudioPlayer audioTracks={audioTracks} autoplay />
+      )}
+
       {/* Full-screen image with Ken Burns effect */}
       {currentImage ? (
         <Box position="absolute" inset={0} overflow="hidden" onClick={handleBackgroundClick}>
@@ -624,7 +636,7 @@ export default function PropertyExplorer() {
               overflow="hidden"
               sx={{
                 clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
-                animation: 'ripple 0.5s ease-out forwards',
+                animation: 'ripple 4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
                 '@keyframes ripple': {
                   to: { clipPath: `circle(150% at ${rippleOrigin.x}% ${rippleOrigin.y}%)` },
                 },
@@ -665,11 +677,16 @@ export default function PropertyExplorer() {
           position="absolute"
           top={4}
           right={4}
-          color="yellow.400"
-          opacity={0.8}
+          bg="white"
+          border="1px solid"
+          borderColor="gray.200"
+          boxShadow="lg"
+          borderRadius="full"
+          p={2}
+          color="yellow.500"
           transition="opacity 0.3s"
         >
-          <FiStar size={20} fill="currentColor" />
+          <FiStar size={18} fill="currentColor" />
         </Box>
       )}
 
@@ -680,7 +697,7 @@ export default function PropertyExplorer() {
         left={0}
         right={0}
         p={4}
-        bgGradient="linear(to-b, blackAlpha.600, transparent)"
+        bgGradient="linear(to-b, blackAlpha.700, transparent)"
         opacity={showUI ? 1 : 0}
         transform={showUI ? 'translateY(0)' : 'translateY(-100%)'}
         transition="all 0.3s ease-out"
@@ -692,15 +709,30 @@ export default function PropertyExplorer() {
               <IconButton
                 aria-label="Exit"
                 icon={<FiX />}
-                variant="ghost"
-                colorScheme="whiteAlpha"
+                bg="white"
+                border="1px solid"
+                borderColor="gray.200"
+                boxShadow="lg"
+                color="blue.600"
+                borderRadius="full"
                 size="sm"
+                _hover={{ bg: 'gray.50' }}
                 onClick={() => navigate('/properties')}
               />
             </Tooltip>
-            <Text color="white" fontSize="sm" fontWeight="medium" opacity={0.9}>
-              {breadcrumb}
-            </Text>
+            <Box
+              bg="white"
+              border="1px solid"
+              borderColor="gray.200"
+              boxShadow="lg"
+              px={3}
+              py={1}
+              borderRadius="full"
+            >
+              <Text color="blue.600" fontSize="sm" fontWeight="medium">
+                {breadcrumb}
+              </Text>
+            </Box>
           </HStack>
 
           <HStack spacing={2}>
@@ -708,9 +740,14 @@ export default function PropertyExplorer() {
               <IconButton
                 aria-label="Info"
                 icon={<FiInfo />}
-                variant="ghost"
-                colorScheme="whiteAlpha"
+                bg="white"
+                border="1px solid"
+                borderColor="gray.200"
+                boxShadow="lg"
+                color="blue.600"
+                borderRadius="full"
                 size="sm"
+                _hover={{ bg: 'gray.50' }}
                 onClick={() => setShowInfo(prev => !prev)}
               />
             </Tooltip>
@@ -718,9 +755,14 @@ export default function PropertyExplorer() {
               <IconButton
                 aria-label="Search"
                 icon={<FiSearch />}
-                variant="ghost"
-                colorScheme="whiteAlpha"
+                bg="white"
+                border="1px solid"
+                borderColor="gray.200"
+                boxShadow="lg"
+                color="blue.600"
+                borderRadius="full"
                 size="sm"
+                _hover={{ bg: 'gray.50' }}
                 onClick={onSearchOpen}
               />
             </Tooltip>
@@ -733,34 +775,44 @@ export default function PropertyExplorer() {
         <>
           <Center
             position="absolute"
-            left={0}
+            left={4}
             top="50%"
             transform="translateY(-50%)"
-            h="200px"
-            w="80px"
+            h="60px"
+            w="60px"
+            borderRadius="full"
+            bg="white"
+            border="1px solid"
+            borderColor="gray.200"
+            boxShadow="lg"
             cursor={hasPrevMedia ? 'pointer' : 'default'}
-            opacity={hasPrevMedia ? 0.6 : 0.2}
-            _hover={{ opacity: hasPrevMedia ? 1 : 0.2 }}
-            transition="opacity 0.2s"
+            opacity={hasPrevMedia ? 1 : 0.4}
+            _hover={{ bg: hasPrevMedia ? 'gray.50' : 'white' }}
+            transition="all 0.2s"
             onClick={(e) => { e.stopPropagation(); navigateMedia('prev'); }}
           >
-            <FiChevronLeft size={48} color="white" />
+            <FiChevronLeft size={32} color="#2563eb" />
           </Center>
 
           <Center
             position="absolute"
-            right={0}
+            right={4}
             top="50%"
             transform="translateY(-50%)"
-            h="200px"
-            w="80px"
+            h="60px"
+            w="60px"
+            borderRadius="full"
+            bg="white"
+            border="1px solid"
+            borderColor="gray.200"
+            boxShadow="lg"
             cursor={hasNextMedia ? 'pointer' : 'default'}
-            opacity={hasNextMedia ? 0.6 : 0.2}
-            _hover={{ opacity: hasNextMedia ? 1 : 0.2 }}
-            transition="opacity 0.2s"
+            opacity={hasNextMedia ? 1 : 0.4}
+            _hover={{ bg: hasNextMedia ? 'gray.50' : 'white' }}
+            transition="all 0.2s"
             onClick={(e) => { e.stopPropagation(); navigateMedia('next'); }}
           >
-            <FiChevronRight size={48} color="white" />
+            <FiChevronRight size={32} color="#2563eb" />
           </Center>
         </>
       )}
@@ -772,14 +824,17 @@ export default function PropertyExplorer() {
           bottom={showFilmstrip ? '140px' : 4}
           left="50%"
           transform="translateX(-50%)"
-          bg="blackAlpha.600"
+          bg="white"
+          border="1px solid"
+          borderColor="gray.200"
+          boxShadow="lg"
           px={3}
           py={1}
           borderRadius="full"
-          opacity={showUI ? 0.9 : 0.4}
+          opacity={showUI ? 1 : 0.5}
           transition="all 0.3s"
         >
-          <Text color="white" fontSize="sm" fontWeight="medium">
+          <Text color="blue.600" fontSize="sm" fontWeight="medium">
             {mediaIndex + 1} / {currentMedia.length}
           </Text>
         </Box>
@@ -791,8 +846,10 @@ export default function PropertyExplorer() {
         bottom={0}
         left={0}
         right={0}
-        bg="blackAlpha.800"
-        backdropFilter="blur(10px)"
+        bg="white"
+        borderTop="1px solid"
+        borderColor="gray.200"
+        boxShadow="lg"
         py={3}
         px={4}
         transform={showFilmstrip ? 'translateY(0)' : 'translateY(100%)'}
@@ -804,7 +861,7 @@ export default function PropertyExplorer() {
           pb={2}
           sx={{
             '&::-webkit-scrollbar': { height: '4px' },
-            '&::-webkit-scrollbar-thumb': { bg: 'whiteAlpha.300', borderRadius: 'full' },
+            '&::-webkit-scrollbar-thumb': { bg: 'gray.300', borderRadius: 'full' },
           }}
         >
           {currentMedia.map((img, idx) => (
@@ -817,11 +874,11 @@ export default function PropertyExplorer() {
               borderRadius="md"
               overflow="hidden"
               border="2px solid"
-              borderColor={idx === mediaIndex ? 'white' : 'transparent'}
+              borderColor={idx === mediaIndex ? 'blue.600' : 'transparent'}
               opacity={idx === mediaIndex ? 1 : 0.6}
               cursor="pointer"
               transition="all 0.2s"
-              _hover={{ opacity: 1, borderColor: 'whiteAlpha.500' }}
+              _hover={{ opacity: 1, borderColor: 'blue.300' }}
               onClick={() => navigateToImage(idx)}
             >
               <Image
@@ -832,8 +889,16 @@ export default function PropertyExplorer() {
                 objectFit="cover"
               />
               {img.starred && (
-                <Box position="absolute" top={1} left={1} color="yellow.400">
-                  <FiStar size={12} fill="currentColor" />
+                <Box
+                  position="absolute"
+                  top={1}
+                  left={1}
+                  bg="white"
+                  borderRadius="full"
+                  p={0.5}
+                  color="yellow.500"
+                >
+                  <FiStar size={10} fill="currentColor" />
                 </Box>
               )}
             </Box>
@@ -995,24 +1060,6 @@ export default function PropertyExplorer() {
         </Center>
       )}
 
-      {/* Keyboard hints - show briefly on first load */}
-      <Box
-        position="absolute"
-        bottom={4}
-        right={4}
-        color="whiteAlpha.400"
-        fontSize="xs"
-        opacity={showUI ? 1 : 0}
-        transition="opacity 0.3s"
-        pointerEvents="none"
-      >
-        <VStack align="end" spacing={0}>
-          <Text>← → navigate</Text>
-          <Text>/ search</Text>
-          <Text>f filmstrip</Text>
-          <Text>i info</Text>
-        </VStack>
-      </Box>
     </Box>
   )
 }
