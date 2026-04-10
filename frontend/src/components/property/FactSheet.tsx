@@ -56,26 +56,42 @@ export default function FactSheet({
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
 
+    // Collect all styles from the current document (including Chakra's CSS-in-JS)
+    const styles: string[] = []
+
+    // Get all <style> tags (Chakra injects styles here)
+    document.querySelectorAll('style').forEach(style => {
+      styles.push(style.outerHTML)
+    })
+
+    // Get all <link rel="stylesheet"> tags
+    document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+      styles.push(link.outerHTML)
+    })
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
           <title>${property.name} - Fact Sheet</title>
+          ${styles.join('\n')}
           <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              line-height: 1.6;
-              color: #333;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              padding: 0 !important;
+              margin: 0 !important;
             }
-            img { max-width: 100%; height: auto; }
             @media print {
-              body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              @page {
+                margin: 0.5in;
+              }
             }
           </style>
-          <link rel="stylesheet" href="${Array.from(document.styleSheets).find(s => s.href?.includes('index'))?.href || ''}">
         </head>
         <body>
           ${printContent.innerHTML}
@@ -85,10 +101,11 @@ export default function FactSheet({
     printWindow.document.close()
 
     // Wait for styles and images to load
-    setTimeout(() => {
-      printWindow.print()
-      printWindow.close()
-    }, 1000)
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print()
+      }, 500)
+    }
   }
 
   // Distribute quotes throughout the document
