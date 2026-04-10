@@ -897,7 +897,7 @@ export default function PropertyExplorer() {
           borderRadius="full"
           p={2}
           color="yellow.500"
-          transition="opacity 0.3s"
+          transition="opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1)"
         >
           <FiStar size={18} fill="currentColor" />
         </Box>
@@ -912,8 +912,8 @@ export default function PropertyExplorer() {
         p={4}
         bgGradient="linear(to-b, blackAlpha.700, transparent)"
         opacity={showUI ? 1 : 0}
-        transform={showUI ? 'translateY(0)' : 'translateY(-100%)'}
-        transition="all 0.3s ease-out"
+        transform={showUI ? 'translateY(0)' : 'translateY(-20px)'}
+        transition="all 1.5s cubic-bezier(0.4, 0, 0.2, 1)"
         pointerEvents={showUI ? 'auto' : 'none'}
       >
         <HStack justify="space-between">
@@ -999,7 +999,7 @@ export default function PropertyExplorer() {
       </Box>
 
       {/* Navigation arrows - edges of screen */}
-      {showUI && currentMedia.length > 1 && (
+      {currentMedia.length > 1 && (
         <>
           <Center
             position="absolute"
@@ -1014,9 +1014,10 @@ export default function PropertyExplorer() {
             borderColor="neutral.200"
             boxShadow="lg"
             cursor={hasPrevMedia ? 'pointer' : 'default'}
-            opacity={hasPrevMedia ? 1 : 0.4}
+            opacity={showUI ? (hasPrevMedia ? 1 : 0.4) : 0}
+            pointerEvents={showUI ? 'auto' : 'none'}
             _hover={{ bg: hasPrevMedia ? 'neutral.50' : 'white' }}
-            transition="all 0.2s"
+            transition="opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s"
             onClick={(e) => { e.stopPropagation(); navigateMedia('prev'); }}
           >
             <FiChevronLeft size={32} color="#0071e3" />
@@ -1035,9 +1036,10 @@ export default function PropertyExplorer() {
             borderColor="neutral.200"
             boxShadow="lg"
             cursor={hasNextMedia ? 'pointer' : 'default'}
-            opacity={hasNextMedia ? 1 : 0.4}
+            opacity={showUI ? (hasNextMedia ? 1 : 0.4) : 0}
+            pointerEvents={showUI ? 'auto' : 'none'}
             _hover={{ bg: hasNextMedia ? 'neutral.50' : 'white' }}
-            transition="all 0.2s"
+            transition="opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s"
             onClick={(e) => { e.stopPropagation(); navigateMedia('next'); }}
           >
             <FiChevronRight size={32} color="#0071e3" />
@@ -1058,7 +1060,7 @@ export default function PropertyExplorer() {
         py={3}
         px={4}
         transform={showFilmstrip ? 'translateY(0)' : 'translateY(100%)'}
-        transition="transform 0.3s ease-out"
+        transition="transform 1s cubic-bezier(0.4, 0, 0.2, 1)"
       >
         <Flex
           gap={2}
