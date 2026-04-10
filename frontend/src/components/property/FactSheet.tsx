@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Tim Sutton <tim@kartoza.com>
 // SPDX-License-Identifier: EUPL-1.2
 
-import { useRef, useEffect } from 'react'
+import { useRef } from 'react'
 import {
   Box,
   Container,
@@ -47,44 +47,48 @@ export default function FactSheet({
   const getEntityImages = (entityType: string, entityId: string) =>
     images.filter(m => m.entity_type === entityType && m.entity_id === entityId).slice(0, 2)
 
-  // Inject print styles on mount
-  useEffect(() => {
-    const styleId = 'fact-sheet-print-styles'
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style')
-      style.id = styleId
-      style.textContent = `
-        @media print {
-          html, body {
-            height: auto !important;
-            overflow: visible !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          body * {
-            visibility: hidden;
-          }
-          #fact-sheet-root, #fact-sheet-root * {
-            visibility: visible;
-          }
-          #fact-sheet-root {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-        }
-      `
-      document.head.appendChild(style)
-    }
-    return () => {
-      const style = document.getElementById(styleId)
-      if (style) style.remove()
-    }
-  }, [])
 
   const handlePrint = () => {
-    window.print()
+    // Clone the content and open in new window for reliable multi-page printing
+    const printContent = printRef.current
+    if (!printContent) return
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${property.name} - Fact Sheet</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            img { max-width: 100%; height: auto; }
+            @media print {
+              body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            }
+          </style>
+          <link rel="stylesheet" href="${Array.from(document.styleSheets).find(s => s.href?.includes('index'))?.href || ''}">
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+
+    // Wait for styles and images to load
+    setTimeout(() => {
+      printWindow.print()
+      printWindow.close()
+    }, 1000)
   }
 
   // Distribute quotes throughout the document
@@ -101,16 +105,6 @@ export default function FactSheet({
       bg="white"
       zIndex={100}
       overflowY="auto"
-      sx={{
-        '@media print': {
-          position: 'absolute',
-          inset: 'auto',
-          width: '100%',
-          height: 'auto',
-          overflow: 'visible',
-          overflowY: 'visible',
-        },
-      }}
     >
       {/* Print/Close toolbar - hidden when printing */}
       <Box
@@ -156,21 +150,7 @@ export default function FactSheet({
       </Box>
 
       {/* Fact sheet content */}
-      <Box
-        ref={printRef}
-        pt="80px"
-        sx={{
-          '@media print': {
-            pt: 0,
-            fontSize: '11pt',
-            lineHeight: '1.4',
-            position: 'relative',
-            display: 'block',
-            height: 'auto',
-            overflow: 'visible',
-          },
-        }}
-      >
+      <Box ref={printRef} pt="80px">
         {/* Hero Section */}
         <Box
           position="relative"
