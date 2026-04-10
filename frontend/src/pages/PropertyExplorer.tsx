@@ -799,16 +799,16 @@ export default function PropertyExplorer() {
             </HStack>
           </Box>
 
-          {quotes.length > 1 && (
+          {currentMedia.length > 1 && (
             <HStack justify="center" mt={4} spacing={2}>
-              {quotes.map((_, idx) => (
+              {currentMedia.map((_, idx) => (
                 <Box
                   key={idx}
                   w={2.5}
                   h={2.5}
                   borderRadius="full"
-                  bg={idx === currentQuoteIndex ? 'white' : 'whiteAlpha.400'}
-                  boxShadow={idx === currentQuoteIndex ? '0 0 8px rgba(255,255,255,0.5)' : 'none'}
+                  bg={idx === mediaIndex ? 'white' : 'whiteAlpha.400'}
+                  boxShadow={idx === mediaIndex ? '0 0 8px rgba(255,255,255,0.5)' : 'none'}
                   transition="all 0.3s"
                 />
               ))}
