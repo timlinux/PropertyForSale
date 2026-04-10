@@ -293,20 +293,20 @@ export default function PropertyExplorer() {
         setIsTransitioning(true)
       }
 
-      // Fade out quote at midpoint of ripple (4s into 8s transition)
+      // Fade out quote gently (starts at 3s, 2s transition completes at 5s)
       setTimeout(() => {
         if (quotes.length > 0) {
           setQuoteVisible(false)
         }
-      }, 4000)
+      }, 3000)
 
-      // Change quote and fade back in shortly after
+      // Change quote and fade back in after full fade out (5.5s)
       setTimeout(() => {
         if (quotes.length > 0) {
           setCurrentQuoteIndex((prev) => (prev + 1) % quotes.length)
           setQuoteVisible(true)
         }
-      }, 5000)
+      }, 5500)
 
       // Complete the image transition after full ripple duration
       setTimeout(() => {
@@ -822,7 +822,7 @@ export default function PropertyExplorer() {
           maxW="90%"
           textAlign="center"
           opacity={quoteVisible ? 1 : 0}
-          transition="opacity 0.8s ease-in-out"
+          transition="opacity 2s cubic-bezier(0.4, 0, 0.2, 1)"
           pointerEvents="none"
           zIndex={5}
         >
