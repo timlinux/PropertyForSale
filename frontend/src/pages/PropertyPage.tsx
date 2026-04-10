@@ -172,12 +172,12 @@ export default function PropertyPage() {
           y: 20 + Math.random() * 60,
         })
 
-        // After transition animation (1.5s), change to next image
+        // After transition animation (4s), change to next image
         setTimeout(() => {
           setSlideshowIndex(nextIndex)
           setIsTransitioning(false)
           setTransitioningToImage(null)
-        }, 1500)
+        }, 4000)
       }
     }, 8000)
 
@@ -208,7 +208,7 @@ export default function PropertyPage() {
       setManualBackground(imageUrl)
       setIsTransitioning(false)
       setTransitioningToImage(null)
-    }, 1500)
+    }, 4000)
   }, [currentBackgroundImage])
 
   // Create map markers from dwellings and areas
@@ -303,7 +303,7 @@ export default function PropertyPage() {
   })
 
   return (
-    <Box minH="100vh" position="relative">
+    <Box minH="100vh" position="relative" overflow="auto">
       <SEOHead
         title={`${property.name}${property.city ? ` in ${property.city}` : ''}`}
         description={seoDescription}
@@ -375,7 +375,7 @@ export default function PropertyPage() {
                 overflow="hidden"
                 sx={{
                   clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
-                  animation: 'rippleExpand 1.5s ease-out forwards',
+                  animation: 'rippleExpand 4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
                   '@keyframes rippleExpand': {
                     '0%': {
                       clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
@@ -433,7 +433,7 @@ export default function PropertyPage() {
       </Box>
 
       {/* Scrollable Content */}
-      <Box position="relative" zIndex={1} minH="100vh">
+      <Box position="relative" zIndex={10} minH="100vh">
         {/* Header with breadcrumb and title */}
         <Box
           py={6}
@@ -745,7 +745,15 @@ export default function PropertyPage() {
 
         {/* Footer */}
         <Box py={8} textAlign="center">
-          <Text color="whiteAlpha.700" fontSize="sm">
+          <Text
+            color="white"
+            fontSize="sm"
+            bg="blackAlpha.600"
+            px={4}
+            py={2}
+            borderRadius="full"
+            display="inline-block"
+          >
             Made with 💗 by{' '}
             <a href="https://kartoza.com" target="_blank" rel="noopener noreferrer" style={{ color: '#c9a227' }}>
               Kartoza

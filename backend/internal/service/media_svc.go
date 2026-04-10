@@ -160,10 +160,12 @@ func (s *MediaService) ListByEntity(ctx context.Context, entityType media.Entity
 
 // UpdateMediaInput contains the data for updating media
 type UpdateMediaInput struct {
-	Autoplay  *bool
-	Starred   *bool
-	SortOrder *int
-	Metadata  map[string]interface{}
+	Autoplay      *bool
+	Starred       *bool
+	SortOrder     *int
+	Caption       *string
+	LinkedAudioID *uuid.UUID
+	Metadata      map[string]interface{}
 }
 
 // Update updates media
@@ -181,6 +183,12 @@ func (s *MediaService) Update(ctx context.Context, id uuid.UUID, input UpdateMed
 	}
 	if input.SortOrder != nil {
 		m.SortOrder = *input.SortOrder
+	}
+	if input.Caption != nil {
+		m.Caption = *input.Caption
+	}
+	if input.LinkedAudioID != nil {
+		m.LinkedAudioID = input.LinkedAudioID
 	}
 	if input.Metadata != nil {
 		m.Metadata = types.JSONB(input.Metadata)

@@ -102,6 +102,19 @@ func (h *MediaHandler) Update(c *gin.Context) {
 		sortOrder := int(v)
 		input.SortOrder = &sortOrder
 	}
+	if v, ok := req["caption"].(string); ok {
+		input.Caption = &v
+	}
+	if v, ok := req["linked_audio_id"].(string); ok {
+		if audioID, err := uuid.Parse(v); err == nil {
+			input.LinkedAudioID = &audioID
+		}
+	}
+	// Allow clearing linked_audio_id by setting it to null
+	if v, exists := req["linked_audio_id"]; exists && v == nil {
+		emptyID := uuid.Nil
+		input.LinkedAudioID = &emptyID
+	}
 
 	m, err := h.mediaSvc.Update(c.Request.Context(), id, input)
 	if err != nil {

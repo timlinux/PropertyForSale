@@ -374,6 +374,29 @@ func runMigrations(db *gorm.DB) error {
 			FOREIGN KEY (recipient_id) REFERENCES users(id)
 		)`,
 
+		// Property quotes table (promotional taglines)
+		`CREATE TABLE IF NOT EXISTS property_quotes (
+			id TEXT PRIMARY KEY,
+			property_id TEXT NOT NULL,
+			text TEXT NOT NULL,
+			sort_order INTEGER DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+		)`,
+
+		// A/B variants table
+		`CREATE TABLE IF NOT EXISTS ab_variants (
+			id TEXT PRIMARY KEY,
+			ab_test_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			content TEXT DEFAULT '{}',
+			weight INTEGER DEFAULT 50,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (ab_test_id) REFERENCES ab_tests(id) ON DELETE CASCADE
+		)`,
+
 		// Create indexes
 		`CREATE INDEX IF NOT EXISTS idx_properties_slug ON properties(slug)`,
 		`CREATE INDEX IF NOT EXISTS idx_properties_owner ON properties(owner_id)`,
@@ -393,6 +416,8 @@ func runMigrations(db *gorm.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_eoi_property ON expressions_of_interest(property_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_email_logs_status ON email_logs(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_property_quotes_property ON property_quotes(property_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_ab_variants_test ON ab_variants(ab_test_id)`,
 	}
 
 	for _, migration := range migrations {
@@ -407,6 +432,8 @@ func runMigrations(db *gorm.DB) error {
 		`ALTER TABLE media ADD COLUMN height INTEGER DEFAULT 0`,
 		`ALTER TABLE media ADD COLUMN duration REAL DEFAULT 0`,
 		`ALTER TABLE media ADD COLUMN starred INTEGER DEFAULT 0`,
+		`ALTER TABLE media ADD COLUMN caption TEXT`,
+		`ALTER TABLE media ADD COLUMN linked_audio_id TEXT`,
 	}
 
 	for _, update := range schemaUpdates {

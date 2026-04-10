@@ -45,9 +45,11 @@ type Media struct {
 	MimeType     string      `json:"mime_type"`
 	Width        int         `json:"width,omitempty"`
 	Height       int         `json:"height,omitempty"`
-	Duration     float64     `json:"duration,omitempty"` // For video/audio in seconds
-	Autoplay     bool        `json:"autoplay" gorm:"default:false"`
-	Starred      bool        `json:"starred" gorm:"default:false"`
+	Duration      float64    `json:"duration,omitempty"` // For video/audio in seconds
+	Caption       string     `json:"caption,omitempty"`  // Optional caption for images
+	LinkedAudioID *uuid.UUID `json:"linked_audio_id,omitempty" gorm:"type:uuid"` // Link audio to image
+	Autoplay      bool       `json:"autoplay" gorm:"default:false"`
+	Starred       bool       `json:"starred" gorm:"default:false"`
 	Metadata     types.JSONB `json:"metadata" gorm:"type:text;default:'{}'"`
 	SortOrder    int         `json:"sort_order" gorm:"default:0"`
 	CreatedAt    time.Time   `json:"created_at"`

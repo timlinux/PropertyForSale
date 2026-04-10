@@ -90,6 +90,8 @@ export interface Media {
   width?: number
   height?: number
   duration?: number  // For video/audio in seconds
+  caption?: string   // Optional caption for images
+  linked_audio_id?: string  // Link audio to image for narration
   autoplay: boolean
   starred: boolean
   sort_order: number
@@ -446,7 +448,7 @@ export const api = {
       return res.json() as Promise<Media>
     }),
 
-  updateMedia: (id: string, data: { autoplay?: boolean; starred?: boolean; sort_order?: number }) =>
+  updateMedia: (id: string, data: { autoplay?: boolean; starred?: boolean; sort_order?: number; caption?: string; linked_audio_id?: string | null }) =>
     fetchAPI<Media>(`/media/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

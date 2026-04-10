@@ -38,6 +38,7 @@ import {
 import { api } from '../api'
 import { usePageTracking } from '../hooks/usePageTracking'
 import { AmbientAudioPlayer } from '../components/media'
+import { ParticleHourglass } from '../components/ui/ParticleHourglass'
 
 interface NavigationContext {
   level: 'property' | 'dwelling' | 'room' | 'area'
@@ -114,9 +115,28 @@ export default function PropertyExplorer() {
     enabled: !!property?.slug,
   })
 
+  const { data: quotesData } = useQuery({
+    queryKey: ['property-quotes', property?.slug],
+    queryFn: () => api.getPropertyQuotes(property!.slug),
+    enabled: !!property?.slug,
+  })
+
   const dwellings = dwellingsData?.data || []
   const areas = areasData?.data || []
   const allMedia = mediaData?.data || []
+  const quotes = quotesData?.data || []
+
+  // Quote cycling state
+  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0)
+  const [quoteVisible, setQuoteVisible] = useState(true)
+  const [quoteProgress, setQuoteProgress] = useState(0)
+  const quoteIntervalRef = useRef<NodeJS.Timeout>()
+  const quoteProgressRef = useRef<NodeJS.Timeout>()
+
+  const QUOTE_DURATION = 10000 // 10 seconds
+  const PROGRESS_INTERVAL = 50 // Update progress every 50ms
+
+  const currentQuote = quotes[currentQuoteIndex]
 
   // Get starred audio tracks for ambient soundscape
   const audioTracks = useMemo(() =>
@@ -247,6 +267,59 @@ export default function PropertyExplorer() {
     x: 15 + Math.random() * 70,
     y: 15 + Math.random() * 70,
   }), [])
+
+  // Cycle through quotes and media every 10 seconds with progress bar
+  useEffect(() => {
+    // Reset progress when slide changes
+    setQuoteProgress(0)
+
+    // Progress bar animation
+    let elapsed = 0
+    quoteProgressRef.current = setInterval(() => {
+      elapsed += PROGRESS_INTERVAL
+      setQuoteProgress((elapsed / QUOTE_DURATION) * 100)
+    }, PROGRESS_INTERVAL)
+
+    // Slide transition (advances both quote and media)
+    quoteIntervalRef.current = setTimeout(() => {
+      // Fade out quote
+      if (quotes.length > 0) {
+        setQuoteVisible(false)
+      }
+
+      // Advance to next image with ripple effect
+      const nextMediaIndex = mediaIndex + 1 < currentMedia.length ? mediaIndex + 1 : 0
+      if (currentMedia.length > 1) {
+        setNextImageUrl(currentMedia[nextMediaIndex]?.url || null)
+        setRippleOrigin(getRandomRippleOrigin())
+        setIsTransitioning(true)
+      }
+
+      // After brief delay, update indices and fade quote back in
+      setTimeout(() => {
+        if (currentMedia.length > 1) {
+          setMediaIndex(nextMediaIndex)
+          setIsTransitioning(false)
+        }
+        if (quotes.length > 0) {
+          setCurrentQuoteIndex((prev) => (prev + 1) % quotes.length)
+          setQuoteVisible(true)
+        }
+      }, 500)
+    }, QUOTE_DURATION)
+
+    return () => {
+      if (quoteIntervalRef.current) clearTimeout(quoteIntervalRef.current)
+      if (quoteProgressRef.current) clearInterval(quoteProgressRef.current)
+    }
+  }, [currentQuoteIndex, quotes.length, mediaIndex, currentMedia, getRandomRippleOrigin, QUOTE_DURATION, PROGRESS_INTERVAL])
+
+  // Reset quote index when quotes/media change
+  useEffect(() => {
+    setCurrentQuoteIndex(0)
+    setQuoteVisible(true)
+    setQuoteProgress(0)
+  }, [quotes])
 
   // Navigation functions
   const goToEntity = useCallback((node: EntityNode) => {
@@ -638,7 +711,7 @@ export default function PropertyExplorer() {
                 clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
                 animation: 'ripple 4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
                 '@keyframes ripple': {
-                  to: { clipPath: `circle(150% at ${rippleOrigin.x}% ${rippleOrigin.y}%)` },
+                  to: { clipPath: `circle(200% at ${rippleOrigin.x}% ${rippleOrigin.y}%)` },
                 },
               }}
             >
@@ -671,6 +744,78 @@ export default function PropertyExplorer() {
         </Center>
       )}
 
+      {/* Quote overlay with hourglass timer */}
+      {currentQuote && (
+        <Box
+          position="absolute"
+          bottom={showFilmstrip ? '180px' : '80px'}
+          left="50%"
+          transform="translateX(-50%)"
+          maxW="85%"
+          textAlign="center"
+          opacity={quoteVisible ? 1 : 0}
+          transition="opacity 0.5s ease-in-out"
+          pointerEvents="none"
+          zIndex={5}
+        >
+          <HStack spacing={6} align="center" justify="center">
+            {/* Quote text */}
+            <Box
+              bg="white"
+              border="1px solid"
+              borderColor="neutral.200"
+              boxShadow="2xl"
+              px={8}
+              py={4}
+              borderRadius="2xl"
+              flex={1}
+              maxW="700px"
+            >
+              <Text
+                color="accent.600"
+                fontSize={{ base: 'xl', md: '2xl', lg: '3xl' }}
+                fontWeight="light"
+                fontStyle="italic"
+                letterSpacing="wide"
+                lineHeight="tall"
+              >
+                "{currentQuote.text}"
+              </Text>
+            </Box>
+
+            {/* Hourglass timer */}
+            <Box
+              bg="whiteAlpha.900"
+              backdropFilter="blur(8px)"
+              borderRadius="xl"
+              p={2}
+              boxShadow="lg"
+            >
+              <ParticleHourglass
+                progress={quoteProgress}
+                size={50}
+                color="#0071e3"
+              />
+            </Box>
+          </HStack>
+
+          {quotes.length > 1 && (
+            <HStack justify="center" mt={3} spacing={2}>
+              {quotes.map((_, idx) => (
+                <Box
+                  key={idx}
+                  w={2}
+                  h={2}
+                  borderRadius="full"
+                  bg={idx === currentQuoteIndex ? 'white' : 'whiteAlpha.500'}
+                  transition="background 0.3s"
+                />
+              ))}
+            </HStack>
+          )}
+        </Box>
+      )}
+
       {/* Starred indicator */}
       {currentImage?.starred && showUI && (
         <Box
@@ -679,7 +824,7 @@ export default function PropertyExplorer() {
           right={4}
           bg="white"
           border="1px solid"
-          borderColor="gray.200"
+          borderColor="neutral.200"
           boxShadow="lg"
           borderRadius="full"
           p={2}
@@ -711,25 +856,25 @@ export default function PropertyExplorer() {
                 icon={<FiX />}
                 bg="white"
                 border="1px solid"
-                borderColor="gray.200"
+                borderColor="neutral.200"
                 boxShadow="lg"
-                color="blue.600"
+                color="accent.500"
                 borderRadius="full"
                 size="sm"
-                _hover={{ bg: 'gray.50' }}
+                _hover={{ bg: 'neutral.50' }}
                 onClick={() => navigate('/properties')}
               />
             </Tooltip>
             <Box
               bg="white"
               border="1px solid"
-              borderColor="gray.200"
+              borderColor="neutral.200"
               boxShadow="lg"
               px={3}
               py={1}
               borderRadius="full"
             >
-              <Text color="blue.600" fontSize="sm" fontWeight="medium">
+              <Text color="accent.500" fontSize="sm" fontWeight="medium">
                 {breadcrumb}
               </Text>
             </Box>
@@ -742,12 +887,12 @@ export default function PropertyExplorer() {
                 icon={<FiInfo />}
                 bg="white"
                 border="1px solid"
-                borderColor="gray.200"
+                borderColor="neutral.200"
                 boxShadow="lg"
-                color="blue.600"
+                color="accent.500"
                 borderRadius="full"
                 size="sm"
-                _hover={{ bg: 'gray.50' }}
+                _hover={{ bg: 'neutral.50' }}
                 onClick={() => setShowInfo(prev => !prev)}
               />
             </Tooltip>
@@ -757,12 +902,12 @@ export default function PropertyExplorer() {
                 icon={<FiSearch />}
                 bg="white"
                 border="1px solid"
-                borderColor="gray.200"
+                borderColor="neutral.200"
                 boxShadow="lg"
-                color="blue.600"
+                color="accent.500"
                 borderRadius="full"
                 size="sm"
-                _hover={{ bg: 'gray.50' }}
+                _hover={{ bg: 'neutral.50' }}
                 onClick={onSearchOpen}
               />
             </Tooltip>
@@ -783,15 +928,15 @@ export default function PropertyExplorer() {
             borderRadius="full"
             bg="white"
             border="1px solid"
-            borderColor="gray.200"
+            borderColor="neutral.200"
             boxShadow="lg"
             cursor={hasPrevMedia ? 'pointer' : 'default'}
             opacity={hasPrevMedia ? 1 : 0.4}
-            _hover={{ bg: hasPrevMedia ? 'gray.50' : 'white' }}
+            _hover={{ bg: hasPrevMedia ? 'neutral.50' : 'white' }}
             transition="all 0.2s"
             onClick={(e) => { e.stopPropagation(); navigateMedia('prev'); }}
           >
-            <FiChevronLeft size={32} color="#2563eb" />
+            <FiChevronLeft size={32} color="#0071e3" />
           </Center>
 
           <Center
@@ -804,15 +949,15 @@ export default function PropertyExplorer() {
             borderRadius="full"
             bg="white"
             border="1px solid"
-            borderColor="gray.200"
+            borderColor="neutral.200"
             boxShadow="lg"
             cursor={hasNextMedia ? 'pointer' : 'default'}
             opacity={hasNextMedia ? 1 : 0.4}
-            _hover={{ bg: hasNextMedia ? 'gray.50' : 'white' }}
+            _hover={{ bg: hasNextMedia ? 'neutral.50' : 'white' }}
             transition="all 0.2s"
             onClick={(e) => { e.stopPropagation(); navigateMedia('next'); }}
           >
-            <FiChevronRight size={32} color="#2563eb" />
+            <FiChevronRight size={32} color="#0071e3" />
           </Center>
         </>
       )}
@@ -826,7 +971,7 @@ export default function PropertyExplorer() {
           transform="translateX(-50%)"
           bg="white"
           border="1px solid"
-          borderColor="gray.200"
+          borderColor="neutral.200"
           boxShadow="lg"
           px={3}
           py={1}
@@ -834,7 +979,7 @@ export default function PropertyExplorer() {
           opacity={showUI ? 1 : 0.5}
           transition="all 0.3s"
         >
-          <Text color="blue.600" fontSize="sm" fontWeight="medium">
+          <Text color="accent.500" fontSize="sm" fontWeight="medium">
             {mediaIndex + 1} / {currentMedia.length}
           </Text>
         </Box>
@@ -848,7 +993,7 @@ export default function PropertyExplorer() {
         right={0}
         bg="white"
         borderTop="1px solid"
-        borderColor="gray.200"
+        borderColor="neutral.200"
         boxShadow="lg"
         py={3}
         px={4}
@@ -861,7 +1006,7 @@ export default function PropertyExplorer() {
           pb={2}
           sx={{
             '&::-webkit-scrollbar': { height: '4px' },
-            '&::-webkit-scrollbar-thumb': { bg: 'gray.300', borderRadius: 'full' },
+            '&::-webkit-scrollbar-thumb': { bg: 'neutral.300', borderRadius: 'full' },
           }}
         >
           {currentMedia.map((img, idx) => (
@@ -874,11 +1019,11 @@ export default function PropertyExplorer() {
               borderRadius="md"
               overflow="hidden"
               border="2px solid"
-              borderColor={idx === mediaIndex ? 'blue.600' : 'transparent'}
+              borderColor={idx === mediaIndex ? 'accent.500' : 'transparent'}
               opacity={idx === mediaIndex ? 1 : 0.6}
               cursor="pointer"
               transition="all 0.2s"
-              _hover={{ opacity: 1, borderColor: 'blue.300' }}
+              _hover={{ opacity: 1, borderColor: 'accent.300' }}
               onClick={() => navigateToImage(idx)}
             >
               <Image
@@ -988,7 +1133,7 @@ export default function PropertyExplorer() {
           onClick={onSearchClose}
         >
           <Box
-            bg="gray.900"
+            bg="neutral.800"
             borderRadius="xl"
             w="100%"
             maxW="450px"
@@ -997,7 +1142,7 @@ export default function PropertyExplorer() {
             shadow="2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <Box p={4} borderBottomWidth="1px" borderColor="gray.700">
+            <Box p={4} borderBottomWidth="1px" borderColor="neutral.600">
               <InputGroup size="lg">
                 <InputLeftElement pointerEvents="none">
                   <FiSearch color="gray" />
@@ -1007,14 +1152,14 @@ export default function PropertyExplorer() {
                   placeholder="Jump to..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  bg="gray.800"
+                  bg="neutral.700"
                   border="none"
                   color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _focus={{ boxShadow: 'none', bg: 'gray.800' }}
+                  _placeholder={{ color: 'neutral.500' }}
+                  _focus={{ boxShadow: 'none', bg: 'neutral.700' }}
                 />
               </InputGroup>
-              <HStack mt={2} spacing={4} color="gray.500" fontSize="xs">
+              <HStack mt={2} spacing={4} color="neutral.500" fontSize="xs">
                 <HStack><Kbd>↑↓</Kbd><Text>navigate</Text></HStack>
                 <HStack><Kbd>Enter</Kbd><Text>select</Text></HStack>
                 <HStack><Kbd>Esc</Kbd><Text>close</Text></HStack>
@@ -1027,12 +1172,12 @@ export default function PropertyExplorer() {
                   key={entity.id}
                   p={3}
                   cursor="pointer"
-                  bg={idx === selectedSearchIndex ? 'blue.600' : 'transparent'}
-                  _hover={{ bg: idx === selectedSearchIndex ? 'blue.500' : 'gray.800' }}
+                  bg={idx === selectedSearchIndex ? 'accent.500' : 'transparent'}
+                  _hover={{ bg: idx === selectedSearchIndex ? 'accent.500' : 'neutral.700' }}
                   onClick={() => goToEntity(entity)}
                   spacing={3}
                 >
-                  <Box color={idx === selectedSearchIndex ? 'white' : 'gray.400'}>
+                  <Box color={idx === selectedSearchIndex ? 'white' : 'neutral.400'}>
                     {entity.type === 'property' && <FiHome />}
                     {entity.type === 'dwelling' && <FiLayers />}
                     {entity.type === 'room' && <FiGrid />}
@@ -1043,7 +1188,7 @@ export default function PropertyExplorer() {
                     <Text color="white" fontSize="sm" fontWeight="medium">
                       {entity.name}
                     </Text>
-                    <Text fontSize="xs" color={idx === selectedSearchIndex ? 'blue.200' : 'gray.500'}>
+                    <Text fontSize="xs" color={idx === selectedSearchIndex ? 'blue.200' : 'neutral.500'}>
                       {entity.type} • {entity.mediaCount} photos
                     </Text>
                   </VStack>
@@ -1051,7 +1196,7 @@ export default function PropertyExplorer() {
               ))}
 
               {filteredEntities.length === 0 && (
-                <Text color="gray.500" textAlign="center" py={8} fontSize="sm">
+                <Text color="neutral.500" textAlign="center" py={8} fontSize="sm">
                   No matches
                 </Text>
               )}

@@ -47,7 +47,7 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { FiPlus, FiTrash2, FiHome, FiLayers, FiMapPin, FiStar } from 'react-icons/fi'
+import { FiPlus, FiTrash2, FiHome, FiLayers, FiMapPin, FiStar, FiEdit2 } from 'react-icons/fi'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, Property, Dwelling, Room, Area, Quote } from '../../api'
 import { useAuthHeaders } from '../../context/authStore'
@@ -635,6 +635,11 @@ function MediaTab({ property }: { property: Property }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [selectedEntityType, setSelectedEntityType] = useState<'property' | 'dwelling' | 'room' | 'area'>('property')
   const [selectedEntityId, setSelectedEntityId] = useState<string>(property.id)
+  const [editingMedia, setEditingMedia] = useState<{
+    id: string
+    caption: string
+    linkedAudioId: string | null
+  } | null>(null)
 
   // Fetch dwellings
   const { data: dwellingsData } = useQuery({
@@ -688,7 +693,7 @@ function MediaTab({ property }: { property: Property }) {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['media', property.slug] })
       toast({
-        title: data.starred ? 'Image starred' : 'Star removed',
+        title: data.starred ? 'Media starred' : 'Star removed',
         status: 'success',
         duration: 2000,
       })
@@ -697,6 +702,22 @@ function MediaTab({ property }: { property: Property }) {
       toast({ title: 'Failed to toggle star', status: 'error', duration: 3000 })
     },
   })
+
+  const updateMediaMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { caption?: string; linked_audio_id?: string | null } }) =>
+      api.updateMedia(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['media', property.slug] })
+      toast({ title: 'Media updated', status: 'success', duration: 2000 })
+      setEditingMedia(null)
+    },
+    onError: () => {
+      toast({ title: 'Failed to update media', status: 'error', duration: 3000 })
+    },
+  })
+
+  // Get all audio files for linking
+  const audioFiles = media.filter((m) => m.type === 'audio')
 
   // Update selected entity ID when type changes
   const handleEntityTypeChange = (type: 'property' | 'dwelling' | 'room' | 'area') => {
@@ -952,13 +973,40 @@ function MediaTab({ property }: { property: Property }) {
                       <Text fontSize="xs" noOfLines={1} title={item.file_name}>
                         {item.file_name}
                       </Text>
+                      {/* Show caption preview if exists */}
+                      {item.caption && (
+                        <Text fontSize="xs" color="blue.500" noOfLines={1} title={item.caption}>
+                          {item.caption}
+                        </Text>
+                      )}
+                      {/* Show linked audio indicator */}
+                      {item.linked_audio_id && (
+                        <Badge size="xs" colorScheme="green" fontSize="xx-small">
+                          🔊 Audio linked
+                        </Badge>
+                      )}
                       <HStack justify="space-between" mt={1}>
                         <Text fontSize="xs" color="gray.500">
                           {(item.file_size / 1024 / 1024).toFixed(2)} MB
                         </Text>
                         <HStack spacing={1}>
-                          {/* Allow starring images and audio files */}
-                          {(item.type === 'image' || item.type === 'audio') && (
+                          {/* Edit button for images - set caption and link audio */}
+                          {item.type === 'image' && (
+                            <IconButton
+                              aria-label="Edit media"
+                              icon={<FiEdit2 />}
+                              size="xs"
+                              colorScheme="blue"
+                              variant="ghost"
+                              onClick={() => setEditingMedia({
+                                id: item.id,
+                                caption: item.caption || '',
+                                linkedAudioId: item.linked_audio_id || null,
+                              })}
+                            />
+                          )}
+                          {/* Allow starring images, videos, and audio files */}
+                          {(item.type === 'image' || item.type === 'video' || item.type === 'video360' || item.type === 'audio') && (
                             <IconButton
                               aria-label={item.starred ? 'Remove star' : `Star ${item.type}`}
                               icon={<FiStar fill={item.starred ? 'currentColor' : 'none'} />}
@@ -1003,6 +1051,67 @@ function MediaTab({ property }: { property: Property }) {
           </CardBody>
         </Card>
       )}
+
+      {/* Edit Media Modal */}
+      <Modal isOpen={!!editingMedia} onClose={() => setEditingMedia(null)} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Edit Image</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4}>
+              <FormControl>
+                <FormLabel>Caption</FormLabel>
+                <Textarea
+                  value={editingMedia?.caption || ''}
+                  onChange={(e) => setEditingMedia(prev => prev ? { ...prev, caption: e.target.value } : null)}
+                  placeholder="Enter a caption for this image..."
+                  rows={3}
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Linked Audio (for narration)</FormLabel>
+                <Select
+                  value={editingMedia?.linkedAudioId || ''}
+                  onChange={(e) => setEditingMedia(prev => prev ? { ...prev, linkedAudioId: e.target.value || null } : null)}
+                >
+                  <option value="">No audio linked</option>
+                  {audioFiles.map((audio) => (
+                    <option key={audio.id} value={audio.id}>
+                      {audio.file_name}
+                    </option>
+                  ))}
+                </Select>
+                <Text fontSize="xs" color="gray.500" mt={1}>
+                  Link an audio file to play when this image is displayed
+                </Text>
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={() => setEditingMedia(null)}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="brand"
+              onClick={() => {
+                if (editingMedia) {
+                  updateMediaMutation.mutate({
+                    id: editingMedia.id,
+                    data: {
+                      caption: editingMedia.caption,
+                      linked_audio_id: editingMedia.linkedAudioId,
+                    },
+                  })
+                }
+              }}
+              isLoading={updateMediaMutation.isPending}
+            >
+              Save
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </VStack>
   )
 }
