@@ -754,67 +754,62 @@ export default function PropertyExplorer() {
       {currentQuote && (
         <Box
           position="absolute"
-          bottom={showFilmstrip ? '180px' : '80px'}
+          bottom={showFilmstrip ? '180px' : '100px'}
           left="50%"
           transform="translateX(-50%)"
-          maxW="85%"
+          maxW="90%"
           textAlign="center"
           opacity={quoteVisible ? 1 : 0}
-          transition="opacity 0.5s ease-in-out"
+          transition="opacity 0.8s ease-in-out"
           pointerEvents="none"
           zIndex={5}
         >
-          <HStack spacing={6} align="center" justify="center">
-            {/* Quote text */}
-            <Box
-              bg="white"
-              border="1px solid"
-              borderColor="neutral.200"
-              boxShadow="2xl"
-              px={8}
-              py={4}
-              borderRadius="2xl"
-              flex={1}
-              maxW="700px"
-            >
+          <Box
+            bg="white"
+            border="1px solid"
+            borderColor="neutral.100"
+            boxShadow="0 25px 80px rgba(0, 0, 0, 0.25)"
+            px={{ base: 8, md: 12, lg: 16 }}
+            py={{ base: 6, md: 8, lg: 10 }}
+            borderRadius="3xl"
+            maxW="900px"
+          >
+            <HStack spacing={{ base: 4, md: 6, lg: 8 }} align="center" justify="center">
+              {/* Quote text */}
               <Text
                 color="accent.600"
-                fontSize={{ base: 'xl', md: '2xl', lg: '3xl' }}
-                fontWeight="light"
+                fontSize={{ base: '2xl', md: '4xl', lg: '5xl' }}
+                fontWeight="300"
                 fontStyle="italic"
-                letterSpacing="wide"
-                lineHeight="tall"
+                letterSpacing="tight"
+                lineHeight="1.3"
+                fontFamily="'Georgia', 'Times New Roman', serif"
               >
                 "{currentQuote.text}"
               </Text>
-            </Box>
 
-            {/* Hourglass timer */}
-            <Box
-              bg="whiteAlpha.900"
-              backdropFilter="blur(8px)"
-              borderRadius="xl"
-              p={2}
-              boxShadow="lg"
-            >
-              <ParticleHourglass
-                progress={quoteProgress}
-                size={50}
-                color="#0071e3"
-              />
-            </Box>
-          </HStack>
+              {/* Hourglass timer inside the container */}
+              <Box flexShrink={0} opacity={0.7}>
+                <ParticleHourglass
+                  progress={quoteProgress}
+                  size={60}
+                  color="#0071e3"
+                />
+              </Box>
+            </HStack>
+          </Box>
 
           {quotes.length > 1 && (
-            <HStack justify="center" mt={3} spacing={2}>
+            <HStack justify="center" mt={4} spacing={2}>
               {quotes.map((_, idx) => (
                 <Box
                   key={idx}
-                  w={2}
-                  h={2}
+                  w={2.5}
+                  h={2.5}
                   borderRadius="full"
-                  bg={idx === currentQuoteIndex ? 'white' : 'whiteAlpha.500'}
-                  transition="background 0.3s"
+                  bg={idx === currentQuoteIndex ? 'white' : 'whiteAlpha.400'}
+                  boxShadow={idx === currentQuoteIndex ? '0 0 8px rgba(255,255,255,0.5)' : 'none'}
+                  transition="all 0.3s"
                 />
               ))}
             </HStack>
