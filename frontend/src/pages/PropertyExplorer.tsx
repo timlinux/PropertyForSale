@@ -848,7 +848,6 @@ export default function PropertyExplorer() {
                 letterSpacing="tight"
                 lineHeight="1.3"
                 fontFamily="'Georgia', 'Times New Roman', serif"
-                transition="color 1s ease-in-out"
               >
                 "{currentQuote.text}"
               </Text>
