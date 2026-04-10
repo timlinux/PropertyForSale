@@ -382,7 +382,7 @@ export default function PropertyExplorer() {
       setIsTransitioning(true)
       setTimeout(() => {
         setIsTransitioning(false)
-      }, 4000)
+      }, 8000)
     }
     prevContextRef.current = context
   }, [context, currentMedia, getRandomRippleOrigin])
@@ -396,7 +396,7 @@ export default function PropertyExplorer() {
       setTimeout(() => {
         setMediaIndex(i => i + 1)
         setIsTransitioning(false)
-      }, 4000)
+      }, 8000)
     } else if (direction === 'prev' && hasPrevMedia) {
       setNextImageUrl(currentMedia[mediaIndex - 1]?.url || null)
       setRippleOrigin(getRandomRippleOrigin())
@@ -405,7 +405,7 @@ export default function PropertyExplorer() {
       setTimeout(() => {
         setMediaIndex(i => i - 1)
         setIsTransitioning(false)
-      }, 4000)
+      }, 8000)
     }
   }, [hasNextMedia, hasPrevMedia, currentMedia, mediaIndex, getRandomRippleOrigin])
 
@@ -419,7 +419,7 @@ export default function PropertyExplorer() {
     setTimeout(() => {
       setMediaIndex(index)
       setIsTransitioning(false)
-    }, 4000)
+    }, 8000)
   }, [mediaIndex, currentMedia, getRandomRippleOrigin])
 
   const navigateSibling = useCallback((direction: 'next' | 'prev') => {
@@ -709,7 +709,7 @@ export default function PropertyExplorer() {
               overflow="hidden"
               sx={{
                 clipPath: `circle(0% at ${rippleOrigin.x}% ${rippleOrigin.y}%)`,
-                animation: 'ripple 4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
+                animation: 'ripple 8s cubic-bezier(0.15, 0.0, 0.25, 1) forwards',
                 '@keyframes ripple': {
                   to: { clipPath: `circle(200% at ${rippleOrigin.x}% ${rippleOrigin.y}%)` },
                 },
