@@ -133,6 +133,9 @@ export default function PropertyExplorer() {
   const quoteIntervalRef = useRef<NodeJS.Timeout>()
   const quoteProgressRef = useRef<NodeJS.Timeout>()
 
+  // Extracted color from current image
+  const [imageColor, setImageColor] = useState('#0071e3')
+
   const QUOTE_DURATION = 10000 // 10 seconds
   const PROGRESS_INTERVAL = 50 // Update progress every 50ms
 
@@ -326,6 +329,65 @@ export default function PropertyExplorer() {
     setQuoteVisible(true)
     setQuoteProgress(0)
   }, [quotes])
+
+  // Extract dominant color from current image
+  useEffect(() => {
+    if (!currentImage?.url) return
+
+    const img = new window.Image()
+    img.crossOrigin = 'anonymous'
+    img.src = currentImage.url
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        // Sample a small version for performance
+        const sampleSize = 50
+        canvas.width = sampleSize
+        canvas.height = sampleSize
+        ctx.drawImage(img, 0, 0, sampleSize, sampleSize)
+
+        const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize)
+        const data = imageData.data
+
+        // Find the most vibrant/saturated color
+        let bestColor = { r: 0, g: 113, b: 227 } // fallback blue
+        let bestSaturation = 0
+
+        for (let i = 0; i < data.length; i += 16) { // Sample every 4th pixel
+          const r = data[i]
+          const g = data[i + 1]
+          const b = data[i + 2]
+
+          // Calculate saturation
+          const max = Math.max(r, g, b)
+          const min = Math.min(r, g, b)
+          const lightness = (max + min) / 2
+          const saturation = max === min ? 0 : (max - min) / (lightness > 127 ? (510 - max - min) : (max + min))
+
+          // Prefer saturated colors that aren't too dark or too light
+          if (saturation > bestSaturation && lightness > 40 && lightness < 200) {
+            bestSaturation = saturation
+            bestColor = { r, g, b }
+          }
+        }
+
+        // Darken the color slightly for better readability
+        const darken = 0.7
+        const finalR = Math.round(bestColor.r * darken)
+        const finalG = Math.round(bestColor.g * darken)
+        const finalB = Math.round(bestColor.b * darken)
+
+        setImageColor(`rgb(${finalR}, ${finalG}, ${finalB})`)
+      } catch {
+        // CORS or other error - use fallback
+        setImageColor('#0071e3')
+      }
+    }
+  }, [currentImage?.url])
 
   // Navigation functions
   const goToEntity = useCallback((node: EntityNode) => {
@@ -765,10 +827,11 @@ export default function PropertyExplorer() {
           zIndex={5}
         >
           <Box
-            bg="white"
+            bg="rgba(255, 255, 255, 0.85)"
+            backdropFilter="blur(20px)"
             border="1px solid"
-            borderColor="neutral.100"
-            boxShadow="0 25px 80px rgba(0, 0, 0, 0.25)"
+            borderColor="whiteAlpha.400"
+            boxShadow="0 25px 80px rgba(0, 0, 0, 0.2)"
             px={{ base: 8, md: 12, lg: 16 }}
             py={{ base: 6, md: 8, lg: 10 }}
             borderRadius="3xl"
@@ -777,23 +840,24 @@ export default function PropertyExplorer() {
             <HStack spacing={{ base: 4, md: 6, lg: 8 }} align="center" justify="center">
               {/* Quote text */}
               <Text
-                color="accent.600"
+                color={imageColor}
                 fontSize={{ base: '2xl', md: '4xl', lg: '5xl' }}
                 fontWeight="300"
                 fontStyle="italic"
                 letterSpacing="tight"
                 lineHeight="1.3"
                 fontFamily="'Georgia', 'Times New Roman', serif"
+                transition="color 1s ease-in-out"
               >
                 "{currentQuote.text}"
               </Text>
 
               {/* Hourglass timer inside the container */}
-              <Box flexShrink={0} opacity={0.7}>
+              <Box flexShrink={0} opacity={0.8}>
                 <ParticleHourglass
                   progress={quoteProgress}
                   size={60}
-                  color="#0071e3"
+                  color={imageColor}
                 />
               </Box>
             </HStack>
@@ -961,29 +1025,6 @@ export default function PropertyExplorer() {
             <FiChevronRight size={32} color="#0071e3" />
           </Center>
         </>
-      )}
-
-      {/* Bottom counter - always minimal */}
-      {currentMedia.length > 0 && (
-        <Box
-          position="absolute"
-          bottom={showFilmstrip ? '140px' : 4}
-          left="50%"
-          transform="translateX(-50%)"
-          bg="white"
-          border="1px solid"
-          borderColor="neutral.200"
-          boxShadow="lg"
-          px={3}
-          py={1}
-          borderRadius="full"
-          opacity={showUI ? 1 : 0.5}
-          transition="all 0.3s"
-        >
-          <Text color="accent.500" fontSize="sm" fontWeight="medium">
-            {mediaIndex + 1} / {currentMedia.length}
-          </Text>
-        </Box>
       )}
 
       {/* Filmstrip - swipe up or press 'f' */}
