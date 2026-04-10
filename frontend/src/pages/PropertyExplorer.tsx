@@ -827,15 +827,16 @@ export default function PropertyExplorer() {
           zIndex={5}
         >
           <Box
-            bg="rgba(255, 255, 255, 0.85)"
-            backdropFilter="blur(20px)"
+            bg="rgba(255, 255, 255, 0.65)"
+            backdropFilter="blur(40px)"
             border="1px solid"
-            borderColor="whiteAlpha.400"
-            boxShadow="0 25px 80px rgba(0, 0, 0, 0.2)"
+            borderColor="whiteAlpha.300"
+            boxShadow="0 25px 80px rgba(0, 0, 0, 0.15)"
             px={{ base: 8, md: 12, lg: 16 }}
             py={{ base: 6, md: 8, lg: 10 }}
             borderRadius="3xl"
             maxW="900px"
+            sx={{ WebkitBackdropFilter: 'blur(40px)' }}
           >
             <HStack spacing={{ base: 4, md: 6, lg: 8 }} align="center" justify="center">
               {/* Quote text */}
