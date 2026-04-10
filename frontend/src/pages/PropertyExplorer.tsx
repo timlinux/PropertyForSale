@@ -34,11 +34,13 @@ import {
   FiStar,
   FiInfo,
   FiMaximize,
+  FiFileText,
 } from 'react-icons/fi'
 import { api } from '../api'
 import { usePageTracking } from '../hooks/usePageTracking'
 import { AmbientAudioPlayer } from '../components/media'
 import { ParticleHourglass } from '../components/ui/ParticleHourglass'
+import FactSheet from '../components/property/FactSheet'
 
 interface NavigationContext {
   level: 'property' | 'dwelling' | 'room' | 'area'
@@ -73,6 +75,7 @@ export default function PropertyExplorer() {
   const [showUI, setShowUI] = useState(true)
   const [showInfo, setShowInfo] = useState(false)
   const [showFilmstrip, setShowFilmstrip] = useState(false)
+  const [showFactSheet, setShowFactSheet] = useState(false)
   const [rippleOrigin, setRippleOrigin] = useState({ x: 50, y: 50 })
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [nextImageUrl, setNextImageUrl] = useState<string | null>(null)
@@ -946,6 +949,21 @@ export default function PropertyExplorer() {
           </HStack>
 
           <HStack spacing={2}>
+            <Tooltip label="Fact Sheet">
+              <IconButton
+                aria-label="Fact Sheet"
+                icon={<FiFileText />}
+                bg="white"
+                border="1px solid"
+                borderColor="neutral.200"
+                boxShadow="lg"
+                color="accent.500"
+                borderRadius="full"
+                size="sm"
+                _hover={{ bg: 'neutral.50' }}
+                onClick={() => setShowFactSheet(true)}
+              />
+            </Tooltip>
             <Tooltip label="Info (i)">
               <IconButton
                 aria-label="Info"
@@ -1245,6 +1263,18 @@ export default function PropertyExplorer() {
             </Box>
           </Box>
         </Center>
+      )}
+
+      {/* Fact Sheet */}
+      {showFactSheet && property && (
+        <FactSheet
+          property={property}
+          media={allMedia}
+          dwellings={dwellings}
+          areas={areas}
+          quotes={quotes}
+          onClose={() => setShowFactSheet(false)}
+        />
       )}
 
     </Box>
