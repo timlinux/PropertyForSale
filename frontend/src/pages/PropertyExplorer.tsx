@@ -280,14 +280,9 @@ export default function PropertyExplorer() {
       setQuoteProgress((elapsed / QUOTE_DURATION) * 100)
     }, PROGRESS_INTERVAL)
 
-    // Slide transition (advances both quote and media)
+    // Slide transition - stagger quote and image changes for smooth zen experience
     quoteIntervalRef.current = setTimeout(() => {
-      // Fade out quote
-      if (quotes.length > 0) {
-        setQuoteVisible(false)
-      }
-
-      // Advance to next image with ripple effect
+      // Start the ripple for next image immediately
       const nextMediaIndex = mediaIndex + 1 < currentMedia.length ? mediaIndex + 1 : 0
       if (currentMedia.length > 1) {
         setNextImageUrl(currentMedia[nextMediaIndex]?.url || null)
@@ -295,17 +290,28 @@ export default function PropertyExplorer() {
         setIsTransitioning(true)
       }
 
-      // After brief delay, update indices and fade quote back in
+      // Fade out quote at midpoint of ripple (4s into 8s transition)
+      setTimeout(() => {
+        if (quotes.length > 0) {
+          setQuoteVisible(false)
+        }
+      }, 4000)
+
+      // Change quote and fade back in shortly after
+      setTimeout(() => {
+        if (quotes.length > 0) {
+          setCurrentQuoteIndex((prev) => (prev + 1) % quotes.length)
+          setQuoteVisible(true)
+        }
+      }, 5000)
+
+      // Complete the image transition after full ripple duration
       setTimeout(() => {
         if (currentMedia.length > 1) {
           setMediaIndex(nextMediaIndex)
           setIsTransitioning(false)
         }
-        if (quotes.length > 0) {
-          setCurrentQuoteIndex((prev) => (prev + 1) % quotes.length)
-          setQuoteVisible(true)
-        }
-      }, 500)
+      }, 8000)
     }, QUOTE_DURATION)
 
     return () => {
