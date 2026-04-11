@@ -29,6 +29,7 @@ func NewQuoteService(quoteRepo repository.QuoteRepository) *QuoteService {
 type CreateQuoteInput struct {
 	PropertyID uuid.UUID
 	Text       string
+	MediaID    *string // Optional link to specific image
 	SortOrder  int
 }
 
@@ -39,6 +40,7 @@ func (s *QuoteService) Create(ctx context.Context, input CreateQuoteInput) (*quo
 		ID:         uuid.New(),
 		PropertyID: input.PropertyID,
 		Text:       input.Text,
+		MediaID:    input.MediaID,
 		SortOrder:  input.SortOrder,
 		CreatedAt:  now,
 		UpdatedAt:  now,
@@ -64,6 +66,7 @@ func (s *QuoteService) ListByPropertyID(ctx context.Context, propertyID uuid.UUI
 // UpdateQuoteInput contains the data for updating a quote
 type UpdateQuoteInput struct {
 	Text      *string
+	MediaID   *string // Optional link to specific image (pass empty string to clear)
 	SortOrder *int
 }
 
@@ -76,6 +79,13 @@ func (s *QuoteService) Update(ctx context.Context, id uuid.UUID, input UpdateQuo
 
 	if input.Text != nil {
 		q.Text = *input.Text
+	}
+	if input.MediaID != nil {
+		if *input.MediaID == "" {
+			q.MediaID = nil // Clear the association
+		} else {
+			q.MediaID = input.MediaID
+		}
 	}
 	if input.SortOrder != nil {
 		q.SortOrder = *input.SortOrder

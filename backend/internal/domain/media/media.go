@@ -26,10 +26,10 @@ const (
 type EntityType string
 
 const (
-	EntityTypeProperty EntityType = "property"
-	EntityTypeDwelling EntityType = "dwelling"
-	EntityTypeRoom     EntityType = "room"
-	EntityTypeArea     EntityType = "area"
+	EntityTypeProperty  EntityType = "property"
+	EntityTypeStructure EntityType = "structure"
+	EntityTypeRoom      EntityType = "room"
+	EntityTypeArea      EntityType = "area"
 )
 
 // Media represents a media file attached to an entity

@@ -23,9 +23,10 @@ func NewQuoteHandler(quoteSvc *service.QuoteService) *QuoteHandler {
 
 // CreateQuoteRequest represents the request body for creating a quote
 type CreateQuoteRequest struct {
-	PropertyID string `json:"property_id" binding:"required"`
-	Text       string `json:"text" binding:"required"`
-	SortOrder  int    `json:"sort_order"`
+	PropertyID string  `json:"property_id" binding:"required"`
+	Text       string  `json:"text" binding:"required"`
+	MediaID    *string `json:"media_id"` // Optional link to specific image
+	SortOrder  int     `json:"sort_order"`
 }
 
 // Create handles POST /api/v1/quotes
@@ -45,6 +46,7 @@ func (h *QuoteHandler) Create(c *gin.Context) {
 	input := service.CreateQuoteInput{
 		PropertyID: propertyID,
 		Text:       req.Text,
+		MediaID:    req.MediaID,
 		SortOrder:  req.SortOrder,
 	}
 
@@ -88,6 +90,7 @@ func (h *QuoteHandler) ListByProperty(c *gin.Context, propertyID uuid.UUID) {
 // UpdateQuoteRequest represents the request body for updating a quote
 type UpdateQuoteRequest struct {
 	Text      *string `json:"text"`
+	MediaID   *string `json:"media_id"`   // Optional link to specific image (pass null to clear)
 	SortOrder *int    `json:"sort_order"`
 }
 
@@ -107,6 +110,7 @@ func (h *QuoteHandler) Update(c *gin.Context) {
 
 	input := service.UpdateQuoteInput{
 		Text:      req.Text,
+		MediaID:   req.MediaID,
 		SortOrder: req.SortOrder,
 	}
 
