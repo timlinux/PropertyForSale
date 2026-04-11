@@ -43,10 +43,10 @@ import { ParticleHourglass } from '../components/ui/ParticleHourglass'
 import FactSheet from '../components/property/FactSheet'
 
 interface NavigationContext {
-  level: 'property' | 'dwelling' | 'room' | 'area'
+  level: 'property' | 'structure' | 'room' | 'area'
   propertySlug: string
-  dwellingId?: string
-  dwellingName?: string
+  structureId?: string
+  structureName?: string
   roomId?: string
   roomName?: string
   areaId?: string
@@ -56,7 +56,7 @@ interface NavigationContext {
 interface EntityNode {
   id: string
   name: string
-  type: 'property' | 'dwelling' | 'room' | 'area'
+  type: 'property' | 'structure' | 'room' | 'area'
   parentId?: string
   mediaCount: number
   children?: EntityNode[]
@@ -100,9 +100,9 @@ export default function PropertyExplorer() {
     enabled: !!slug,
   })
 
-  const { data: dwellingsData } = useQuery({
-    queryKey: ['property-dwellings', property?.slug],
-    queryFn: () => api.getPropertyDwellings(property!.slug),
+  const { data: structuresData } = useQuery({
+    queryKey: ['property-structures', property?.slug],
+    queryFn: () => api.getPropertyStructures(property!.slug),
     enabled: !!property?.slug,
   })
 
@@ -124,7 +124,7 @@ export default function PropertyExplorer() {
     enabled: !!property?.slug,
   })
 
-  const dwellings = dwellingsData?.data || []
+  const structures = structuresData?.data || []
   const areas = areasData?.data || []
   const allMedia = mediaData?.data || []
   const quotes = quotesData?.data || []
@@ -144,6 +144,12 @@ export default function PropertyExplorer() {
 
   const currentQuote = quotes[currentQuoteIndex]
 
+  // Find the image associated with the current quote (if any)
+  const quoteLinkedImage = useMemo(() => {
+    if (!currentQuote?.media_id) return null
+    return allMedia.find(m => m.id === currentQuote.media_id) || null
+  }, [currentQuote, allMedia])
+
   // Get starred audio tracks for ambient soundscape
   const audioTracks = useMemo(() =>
     allMedia.filter((m) => m.type === 'audio' && m.starred),
@@ -159,9 +165,9 @@ export default function PropertyExplorer() {
     let entityId: string
 
     switch (context.level) {
-      case 'dwelling':
-        entityType = 'dwelling'
-        entityId = context.dwellingId || ''
+      case 'structure':
+        entityType = 'structure'
+        entityId = context.structureId || ''
         break
       case 'room':
         entityType = 'room'
@@ -185,8 +191,8 @@ export default function PropertyExplorer() {
       })
   }, [context, allMedia, property])
 
-  // Current image
-  const currentImage = currentMedia[mediaIndex] || null
+  // Current image - prefer quote's linked image, fallback to currentMedia
+  const currentImage = quoteLinkedImage || currentMedia[mediaIndex] || null
   const hasNextMedia = mediaIndex < currentMedia.length - 1
   const hasPrevMedia = mediaIndex > 0
 
@@ -205,29 +211,29 @@ export default function PropertyExplorer() {
       children: [],
     }
 
-    dwellings.forEach(dwelling => {
-      const dwellingNode: EntityNode = {
-        id: dwelling.id,
-        name: dwelling.name,
-        type: 'dwelling',
+    structures.forEach(structure => {
+      const structureNode: EntityNode = {
+        id: structure.id,
+        name: structure.name,
+        type: 'structure',
         parentId: property.id,
-        mediaCount: getMediaCount('dwelling', dwelling.id),
+        mediaCount: getMediaCount('structure', structure.id),
         children: [],
       }
 
-      if (dwelling.rooms) {
-        dwelling.rooms.forEach(room => {
-          dwellingNode.children?.push({
+      if (structure.rooms) {
+        structure.rooms.forEach(room => {
+          structureNode.children?.push({
             id: room.id,
             name: room.name,
             type: 'room',
-            parentId: dwelling.id,
+            parentId: structure.id,
             mediaCount: getMediaCount('room', room.id),
           })
         })
       }
 
-      propertyNode.children?.push(dwellingNode)
+      propertyNode.children?.push(structureNode)
     })
 
     areas.forEach(area => {
@@ -241,7 +247,7 @@ export default function PropertyExplorer() {
     })
 
     return [propertyNode]
-  }, [property, dwellings, areas, allMedia])
+  }, [property, structures, areas, allMedia])
 
   // Flatten tree for search
   const flatEntities = useMemo(() => {
@@ -288,10 +294,29 @@ export default function PropertyExplorer() {
 
     // Slide transition - stagger quote and image changes for smooth zen experience
     quoteIntervalRef.current = setTimeout(() => {
-      // Start the ripple for next image immediately
-      const nextMediaIndex = mediaIndex + 1 < currentMedia.length ? mediaIndex + 1 : 0
-      if (currentMedia.length > 1) {
-        setNextImageUrl(currentMedia[nextMediaIndex]?.url || null)
+      // Calculate next quote and its associated image
+      const nextQuoteIndex = quotes.length > 0 ? (currentQuoteIndex + 1) % quotes.length : 0
+      const nextQuote = quotes[nextQuoteIndex]
+      const nextQuoteLinkedImage = nextQuote?.media_id
+        ? allMedia.find(m => m.id === nextQuote.media_id)
+        : null
+
+      // Determine next image URL - prefer quote's linked image, fallback to cycling currentMedia
+      let nextImageUrlToUse: string | null = null
+      let shouldUpdateMediaIndex = false
+
+      if (nextQuoteLinkedImage) {
+        // Use the next quote's linked image
+        nextImageUrlToUse = nextQuoteLinkedImage.url
+      } else if (currentMedia.length > 1) {
+        // Cycle through current entity's media
+        const nextMediaIndex = mediaIndex + 1 < currentMedia.length ? mediaIndex + 1 : 0
+        nextImageUrlToUse = currentMedia[nextMediaIndex]?.url || null
+        shouldUpdateMediaIndex = true
+      }
+
+      if (nextImageUrlToUse) {
+        setNextImageUrl(nextImageUrlToUse)
         setRippleOrigin(getRandomRippleOrigin())
         setIsTransitioning(true)
       }
@@ -306,17 +331,18 @@ export default function PropertyExplorer() {
       // Change quote and fade back in after full fade out (5.5s)
       setTimeout(() => {
         if (quotes.length > 0) {
-          setCurrentQuoteIndex((prev) => (prev + 1) % quotes.length)
+          setCurrentQuoteIndex(nextQuoteIndex)
           setQuoteVisible(true)
         }
       }, 5500)
 
       // Complete the image transition after full ripple duration
       setTimeout(() => {
-        if (currentMedia.length > 1) {
+        if (shouldUpdateMediaIndex && currentMedia.length > 1) {
+          const nextMediaIndex = mediaIndex + 1 < currentMedia.length ? mediaIndex + 1 : 0
           setMediaIndex(nextMediaIndex)
-          setIsTransitioning(false)
         }
+        setIsTransitioning(false)
       }, 8000)
     }, QUOTE_DURATION)
 
@@ -324,7 +350,7 @@ export default function PropertyExplorer() {
       if (quoteIntervalRef.current) clearTimeout(quoteIntervalRef.current)
       if (quoteProgressRef.current) clearInterval(quoteProgressRef.current)
     }
-  }, [currentQuoteIndex, quotes.length, mediaIndex, currentMedia, getRandomRippleOrigin, QUOTE_DURATION, PROGRESS_INTERVAL])
+  }, [currentQuoteIndex, quotes, mediaIndex, currentMedia, allMedia, getRandomRippleOrigin, QUOTE_DURATION, PROGRESS_INTERVAL])
 
   // Reset quote index when quotes/media change
   useEffect(() => {
@@ -398,21 +424,21 @@ export default function PropertyExplorer() {
 
     if (node.type === 'property') {
       setContext({ level: 'property', propertySlug: slug! })
-    } else if (node.type === 'dwelling') {
+    } else if (node.type === 'structure') {
       setContext({
-        level: 'dwelling',
+        level: 'structure',
         propertySlug: slug!,
-        dwellingId: node.id,
-        dwellingName: node.name,
+        structureId: node.id,
+        structureName: node.name,
       })
     } else if (node.type === 'room') {
-      const dwelling = dwellings.find(d => d.rooms?.some(r => r.id === node.id))
-      if (dwelling) {
+      const structure = structures.find(d => d.rooms?.some(r => r.id === node.id))
+      if (structure) {
         setContext({
           level: 'room',
           propertySlug: slug!,
-          dwellingId: dwelling.id,
-          dwellingName: dwelling.name,
+          structureId: structure.id,
+          structureName: structure.name,
           roomId: node.id,
           roomName: node.name,
         })
@@ -428,18 +454,18 @@ export default function PropertyExplorer() {
 
     onSearchClose()
     setSearchQuery('')
-  }, [slug, dwellings, onSearchClose])
+  }, [slug, structures, onSearchClose])
 
   const goUp = useCallback(() => {
     setMediaIndex(0)
     if (context.level === 'room') {
       setContext({
-        level: 'dwelling',
+        level: 'structure',
         propertySlug: context.propertySlug,
-        dwellingId: context.dwellingId,
-        dwellingName: context.dwellingName,
+        structureId: context.structureId,
+        structureName: context.structureName,
       })
-    } else if (context.level === 'dwelling' || context.level === 'area') {
+    } else if (context.level === 'structure' || context.level === 'area') {
       setContext({ level: 'property', propertySlug: context.propertySlug })
     }
   }, [context])
@@ -496,20 +522,20 @@ export default function PropertyExplorer() {
   const navigateSibling = useCallback((direction: 'next' | 'prev') => {
     setMediaIndex(0)
 
-    if (context.level === 'dwelling') {
-      const idx = dwellings.findIndex(d => d.id === context.dwellingId)
+    if (context.level === 'structure') {
+      const idx = structures.findIndex(d => d.id === context.structureId)
       const newIdx = direction === 'next' ? idx + 1 : idx - 1
-      if (newIdx >= 0 && newIdx < dwellings.length) {
+      if (newIdx >= 0 && newIdx < structures.length) {
         setContext({
-          level: 'dwelling',
+          level: 'structure',
           propertySlug: context.propertySlug,
-          dwellingId: dwellings[newIdx].id,
-          dwellingName: dwellings[newIdx].name,
+          structureId: structures[newIdx].id,
+          structureName: structures[newIdx].name,
         })
       }
-    } else if (context.level === 'room' && context.dwellingId) {
-      const dwelling = dwellings.find(d => d.id === context.dwellingId)
-      const rooms = dwelling?.rooms || []
+    } else if (context.level === 'room' && context.structureId) {
+      const structure = structures.find(d => d.id === context.structureId)
+      const rooms = structure?.rooms || []
       const idx = rooms.findIndex(r => r.id === context.roomId)
       const newIdx = direction === 'next' ? idx + 1 : idx - 1
       if (newIdx >= 0 && newIdx < rooms.length) {
@@ -531,7 +557,7 @@ export default function PropertyExplorer() {
         })
       }
     }
-  }, [context, dwellings, areas])
+  }, [context, structures, areas])
 
   // Auto-hide UI
   const resetUITimer = useCallback(() => {
@@ -688,8 +714,8 @@ export default function PropertyExplorer() {
   // Context breadcrumb
   const breadcrumb = useMemo(() => {
     const parts: string[] = [property?.name || '']
-    if (context.level === 'dwelling' || context.level === 'room') {
-      parts.push(context.dwellingName || '')
+    if (context.level === 'structure' || context.level === 'room') {
+      parts.push(context.structureName || '')
     }
     if (context.level === 'room') {
       parts.push(context.roomName || '')
@@ -856,10 +882,10 @@ export default function PropertyExplorer() {
               </Text>
 
               {/* Hourglass timer inside the container */}
-              <Box flexShrink={0} opacity={0.8}>
+              <Box flexShrink={0} opacity={0.8} display="flex" alignItems="center" alignSelf="center">
                 <ParticleHourglass
                   progress={quoteProgress}
-                  size={60}
+                  size={30}
                   color={imageColor}
                 />
               </Box>
@@ -1158,8 +1184,8 @@ export default function PropertyExplorer() {
 
             <HStack spacing={4} pt={2}>
               <VStack align="start" spacing={0}>
-                <Text color="whiteAlpha.500" fontSize="xs">Dwellings</Text>
-                <Text color="white" fontSize="lg" fontWeight="bold">{dwellings.length}</Text>
+                <Text color="whiteAlpha.500" fontSize="xs">Structures</Text>
+                <Text color="white" fontSize="lg" fontWeight="bold">{structures.length}</Text>
               </VStack>
               <VStack align="start" spacing={0}>
                 <Text color="whiteAlpha.500" fontSize="xs">Areas</Text>
@@ -1241,7 +1267,7 @@ export default function PropertyExplorer() {
                 >
                   <Box color={idx === selectedSearchIndex ? 'white' : 'neutral.400'}>
                     {entity.type === 'property' && <FiHome />}
-                    {entity.type === 'dwelling' && <FiLayers />}
+                    {entity.type === 'structure' && <FiLayers />}
                     {entity.type === 'room' && <FiGrid />}
                     {entity.type === 'area' && <FiMaximize />}
                   </Box>
@@ -1272,7 +1298,7 @@ export default function PropertyExplorer() {
         <FactSheet
           property={property}
           media={allMedia}
-          dwellings={dwellings}
+          structures={structures}
           areas={areas}
           quotes={quotes}
           onClose={() => setShowFactSheet(false)}

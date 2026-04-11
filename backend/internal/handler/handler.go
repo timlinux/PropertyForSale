@@ -12,7 +12,7 @@ import (
 // Handlers holds all HTTP handler implementations
 type Handlers struct {
 	Property  *PropertyHandler
-	Dwelling  *DwellingHandler
+	Structure *StructureHandler
 	Room      *RoomHandler
 	Area      *AreaHandler
 	Media     *MediaHandler
@@ -28,8 +28,8 @@ type Handlers struct {
 // NewHandlers creates a new Handlers instance with all implementations
 func NewHandlers(services *service.Services, repos *repository.Repositories, cfg *config.Config, isDev bool) *Handlers {
 	return &Handlers{
-		Property:  NewPropertyHandler(services.Property, services.Dwelling, services.Room, services.Area, services.Media, services.Quote),
-		Dwelling:  NewDwellingHandler(services.Dwelling, services.Room),
+		Property:  NewPropertyHandler(services.Property, services.Structure, services.Room, services.Area, services.Media, services.Quote),
+		Structure: NewStructureHandler(services.Structure, services.Room),
 		Room:      NewRoomHandler(services.Room),
 		Area:      NewAreaHandler(services.Area),
 		Media:     NewMediaHandler(services.Media),

@@ -94,7 +94,7 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 		{
 			properties.GET("", handlers.Property.List)
 			properties.GET("/:slug", handlers.Property.GetBySlug)
-			properties.GET("/:slug/dwellings", handlers.Property.ListDwellings)
+			properties.GET("/:slug/structures", handlers.Property.ListStructures)
 			properties.GET("/:slug/areas", handlers.Property.ListAreas)
 			properties.GET("/:slug/media", handlers.Property.ListMedia)
 			properties.GET("/:slug/quotes", handlers.Property.ListQuotes)
@@ -109,18 +109,18 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 			propertiesAuth.DELETE("/:slug", handlers.Property.Delete)
 		}
 
-		// Dwelling routes
-		dwellings := v1.Group("/dwellings")
+		// Structure routes
+		structures := v1.Group("/structures")
 		{
-			dwellings.GET("/:id", handlers.Dwelling.Get)
-			dwellings.GET("/:id/rooms", handlers.Dwelling.ListRooms)
+			structures.GET("/:id", handlers.Structure.Get)
+			structures.GET("/:id/rooms", handlers.Structure.ListRooms)
 		}
-		dwellingsAuth := v1.Group("/dwellings")
-		dwellingsAuth.Use(middleware.RequireAuth(cfg))
+		structuresAuth := v1.Group("/structures")
+		structuresAuth.Use(middleware.RequireAuth(cfg))
 		{
-			dwellingsAuth.POST("", handlers.Dwelling.Create)
-			dwellingsAuth.PUT("/:id", handlers.Dwelling.Update)
-			dwellingsAuth.DELETE("/:id", handlers.Dwelling.Delete)
+			structuresAuth.POST("", handlers.Structure.Create)
+			structuresAuth.PUT("/:id", handlers.Structure.Update)
+			structuresAuth.DELETE("/:id", handlers.Structure.Delete)
 		}
 
 		// Room routes

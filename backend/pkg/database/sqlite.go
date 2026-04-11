@@ -122,8 +122,8 @@ func runMigrations(db *gorm.DB) error {
 			FOREIGN KEY (owner_id) REFERENCES users(id)
 		)`,
 
-		// Dwellings table
-		`CREATE TABLE IF NOT EXISTS dwellings (
+		// Structures table (formerly dwellings - includes houses, barns, sheds, etc.)
+		`CREATE TABLE IF NOT EXISTS structures (
 			id TEXT PRIMARY KEY,
 			property_id TEXT NOT NULL,
 			name TEXT NOT NULL,
@@ -143,16 +143,17 @@ func runMigrations(db *gorm.DB) error {
 		// Rooms table
 		`CREATE TABLE IF NOT EXISTS rooms (
 			id TEXT PRIMARY KEY,
-			dwelling_id TEXT NOT NULL,
+			structure_id TEXT NOT NULL,
 			name TEXT NOT NULL,
 			type TEXT,
 			description TEXT,
 			size_sqm REAL,
-			floor INTEGER DEFAULT 0,
+			floor_start INTEGER DEFAULT 0,
+			floor_end INTEGER DEFAULT 0,
 			sort_order INTEGER DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (dwelling_id) REFERENCES dwellings(id) ON DELETE CASCADE
+			FOREIGN KEY (structure_id) REFERENCES structures(id) ON DELETE CASCADE
 		)`,
 
 		// Areas table
@@ -401,8 +402,8 @@ func runMigrations(db *gorm.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_properties_slug ON properties(slug)`,
 		`CREATE INDEX IF NOT EXISTS idx_properties_owner ON properties(owner_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_properties_status ON properties(status)`,
-		`CREATE INDEX IF NOT EXISTS idx_dwellings_property ON dwellings(property_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_rooms_dwelling ON rooms(dwelling_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_structures_property ON structures(property_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_rooms_structure ON rooms(structure_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_areas_property ON areas(property_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_media_entity ON media(entity_type, entity_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_content_versions_entity ON content_versions(entity_type, entity_id)`,
@@ -434,12 +435,43 @@ func runMigrations(db *gorm.DB) error {
 		`ALTER TABLE media ADD COLUMN starred INTEGER DEFAULT 0`,
 		`ALTER TABLE media ADD COLUMN caption TEXT`,
 		`ALTER TABLE media ADD COLUMN linked_audio_id TEXT`,
+		// Room floor changes - support spanning levels
+		`ALTER TABLE rooms ADD COLUMN floor_start INTEGER DEFAULT 0`,
+		`ALTER TABLE rooms ADD COLUMN floor_end INTEGER DEFAULT 0`,
+		// Quote-media association - optional link to specific image
+		`ALTER TABLE property_quotes ADD COLUMN media_id TEXT`,
+		// Rename dwelling to structure - add structure_id column to rooms
+		`ALTER TABLE rooms ADD COLUMN structure_id TEXT`,
 	}
 
 	for _, update := range schemaUpdates {
 		// Ignore errors - column may already exist
 		db.Exec(update)
 	}
+
+	// Migrate old floor data to floor_start/floor_end (if floor column exists)
+	db.Exec(`UPDATE rooms SET floor_start = floor, floor_end = floor WHERE floor_start = 0 AND floor_end = 0 AND floor IS NOT NULL AND floor != 0`)
+
+	// Migration: Rename dwellings to structures
+	// Check if old dwellings table exists and structures doesn't
+	var dwellingsExists, structuresExists int
+	db.Raw(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='dwellings'`).Scan(&dwellingsExists)
+	db.Raw(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='structures'`).Scan(&structuresExists)
+
+	if dwellingsExists > 0 && structuresExists == 0 {
+		log.Info().Msg("Migrating dwellings table to structures")
+		// Rename the table
+		db.Exec(`ALTER TABLE dwellings RENAME TO structures`)
+		// Drop old index and create new one
+		db.Exec(`DROP INDEX IF EXISTS idx_dwellings_property`)
+		db.Exec(`CREATE INDEX IF NOT EXISTS idx_structures_property ON structures(property_id)`)
+	}
+
+	// Copy dwelling_id to structure_id in rooms table (if dwelling_id exists)
+	db.Exec(`UPDATE rooms SET structure_id = dwelling_id WHERE structure_id IS NULL AND dwelling_id IS NOT NULL`)
+
+	// Update media entity_type from 'dwelling' to 'structure'
+	db.Exec(`UPDATE media SET entity_type = 'structure' WHERE entity_type = 'dwelling'`)
 
 	// Fix media records with zero UUIDs
 	if err := fixZeroMediaIDs(db); err != nil {

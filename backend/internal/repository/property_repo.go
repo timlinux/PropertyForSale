@@ -28,7 +28,7 @@ func (r *propertyRepository) Create(ctx context.Context, p *property.Property) e
 func (r *propertyRepository) GetByID(ctx context.Context, id uuid.UUID) (*property.Property, error) {
 	var p property.Property
 	err := r.db.WithContext(ctx).
-		Preload("Dwellings").
+		Preload("Structures").
 		Preload("Areas").
 		First(&p, "id = ?", id).Error
 	if err != nil {
@@ -40,7 +40,7 @@ func (r *propertyRepository) GetByID(ctx context.Context, id uuid.UUID) (*proper
 func (r *propertyRepository) GetBySlug(ctx context.Context, slug string) (*property.Property, error) {
 	var p property.Property
 	err := r.db.WithContext(ctx).
-		Preload("Dwellings").
+		Preload("Structures").
 		Preload("Areas").
 		First(&p, "slug = ?", slug).Error
 	if err != nil {

@@ -22,7 +22,7 @@ import (
 // Repositories holds all repository implementations
 type Repositories struct {
 	Property     PropertyRepository
-	Dwelling     DwellingRepository
+	Structure    StructureRepository
 	Room         RoomRepository
 	Area         AreaRepository
 	Media        MediaRepository
@@ -38,7 +38,7 @@ type Repositories struct {
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
 		Property:     NewPropertyRepository(db),
-		Dwelling:     NewDwellingRepository(db),
+		Structure:    NewStructureRepository(db),
 		Room:         NewRoomRepository(db),
 		Area:         NewAreaRepository(db),
 		Media:        NewMediaRepository(db),
@@ -61,12 +61,12 @@ type PropertyRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-// DwellingRepository defines dwelling data access operations
-type DwellingRepository interface {
-	Create(ctx context.Context, d *property.Dwelling) error
-	GetByID(ctx context.Context, id uuid.UUID) (*property.Dwelling, error)
-	ListByPropertyID(ctx context.Context, propertyID uuid.UUID) ([]property.Dwelling, error)
-	Update(ctx context.Context, d *property.Dwelling) error
+// StructureRepository defines structure data access operations
+type StructureRepository interface {
+	Create(ctx context.Context, s *property.Structure) error
+	GetByID(ctx context.Context, id uuid.UUID) (*property.Structure, error)
+	ListByPropertyID(ctx context.Context, propertyID uuid.UUID) ([]property.Structure, error)
+	Update(ctx context.Context, s *property.Structure) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -74,7 +74,7 @@ type DwellingRepository interface {
 type RoomRepository interface {
 	Create(ctx context.Context, r *property.Room) error
 	GetByID(ctx context.Context, id uuid.UUID) (*property.Room, error)
-	ListByDwellingID(ctx context.Context, dwellingID uuid.UUID) ([]property.Room, error)
+	ListByStructureID(ctx context.Context, structureID uuid.UUID) ([]property.Room, error)
 	Update(ctx context.Context, r *property.Room) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

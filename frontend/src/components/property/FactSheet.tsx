@@ -17,12 +17,12 @@ import {
   Flex,
 } from '@chakra-ui/react'
 import { FiPrinter, FiX, FiMapPin, FiHome, FiGrid, FiSun } from 'react-icons/fi'
-import type { Property, Media, Dwelling, Area, Quote } from '../../api'
+import type { Property, Media, Structure, Area, Quote } from '../../api'
 
 interface FactSheetProps {
   property: Property
   media: Media[]
-  dwellings: Dwelling[]
+  structures: Structure[]
   areas: Area[]
   quotes: Quote[]
   onClose: () => void
@@ -31,7 +31,7 @@ interface FactSheetProps {
 export default function FactSheet({
   property,
   media,
-  dwellings,
+  structures,
   areas,
   quotes,
   onClose,
@@ -310,8 +310,8 @@ export default function FactSheet({
             </Box>
           )}
 
-          {/* Dwellings Section */}
-          {dwellings.length > 0 && (
+          {/* Structures Section */}
+          {structures.length > 0 && (
             <Box
               mb={12}
               sx={{
@@ -323,16 +323,16 @@ export default function FactSheet({
               <HStack spacing={3} mb={6}>
                 <Icon as={FiHome} boxSize={6} color="accent.500" />
                 <Heading as="h2" size="lg" fontWeight="500" color="neutral.800">
-                  Dwellings & Buildings
+                  Structures & Buildings
                 </Heading>
               </HStack>
 
               <VStack spacing={8} align="stretch">
-                {dwellings.map((dwelling, idx) => {
-                  const dwellingImages = getEntityImages('dwelling', dwelling.id)
+                {structures.map((structure, idx) => {
+                  const structureImages = getEntityImages('structure', structure.id)
                   return (
                     <Box
-                      key={dwelling.id}
+                      key={structure.id}
                       p={6}
                       bg="neutral.50"
                       borderRadius="xl"
@@ -343,7 +343,7 @@ export default function FactSheet({
                         direction={{ base: 'column', md: 'row' }}
                         gap={6}
                       >
-                        {dwellingImages[0] && (
+                        {structureImages[0] && (
                           <Box
                             flexShrink={0}
                             w={{ base: '100%', md: '300px' }}
@@ -352,8 +352,8 @@ export default function FactSheet({
                             overflow="hidden"
                           >
                             <Image
-                              src={dwellingImages[0].url}
-                              alt={dwelling.name}
+                              src={structureImages[0].url}
+                              alt={structure.name}
                               w="100%"
                               h="100%"
                               objectFit="cover"
@@ -362,7 +362,7 @@ export default function FactSheet({
                         )}
                         <Box flex={1}>
                           <Heading as="h3" size="md" mb={2} color="neutral.800">
-                            {dwelling.name}
+                            {structure.name}
                           </Heading>
                           <Text
                             fontSize="sm"
@@ -371,22 +371,22 @@ export default function FactSheet({
                             textTransform="capitalize"
                             mb={3}
                           >
-                            {dwelling.type?.replace('_', ' ')}
+                            {structure.type?.replace('_', ' ')}
                           </Text>
-                          {dwelling.description && (
+                          {structure.description && (
                             <Text color="neutral.600" mb={4} lineHeight="1.7">
-                              {dwelling.description}
+                              {structure.description}
                             </Text>
                           )}
 
                           {/* Rooms */}
-                          {dwelling.rooms && dwelling.rooms.length > 0 && (
+                          {structure.rooms && structure.rooms.length > 0 && (
                             <Box>
                               <Text fontWeight="600" color="neutral.700" mb={2} fontSize="sm">
                                 Rooms:
                               </Text>
                               <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={2}>
-                                {dwelling.rooms.map((room) => (
+                                {structure.rooms.map((room) => (
                                   <HStack
                                     key={room.id}
                                     spacing={2}
@@ -397,9 +397,11 @@ export default function FactSheet({
                                     <Icon as={FiGrid} color="neutral.400" boxSize={4} />
                                     <Text fontSize="sm" color="neutral.700">
                                       {room.name}
-                                      {room.floor !== undefined && room.floor !== 0 && (
+                                      {(room.floor_start !== 0 || room.floor_end !== 0) && (
                                         <Text as="span" color="neutral.400">
-                                          {' '}(Floor {room.floor})
+                                          {' '}({room.floor_start === room.floor_end
+                                            ? `Floor ${room.floor_start}`
+                                            : `Floors ${room.floor_start}-${room.floor_end}`})
                                         </Text>
                                       )}
                                     </Text>
@@ -411,7 +413,7 @@ export default function FactSheet({
                         </Box>
                       </Flex>
 
-                      {/* Quote after dwelling */}
+                      {/* Quote after structure */}
                       {getQuote(idx + 2) && quotes.length > idx + 2 && idx === 0 && (
                         <Box textAlign="center" pt={6} mt={6} borderTop="1px solid" borderColor="neutral.200">
                           <Text

@@ -23,12 +23,13 @@ func NewRoomHandler(roomSvc *service.RoomService) *RoomHandler {
 
 // CreateRoomRequest represents the request body for creating a room
 type CreateRoomRequest struct {
-	DwellingID  string  `json:"dwelling_id" binding:"required"`
+	StructureID string  `json:"structure_id" binding:"required"`
 	Name        string  `json:"name" binding:"required"`
 	Type        string  `json:"type"`
 	Description string  `json:"description"`
 	SizeSqm     float64 `json:"size_sqm"`
-	Floor       int     `json:"floor"`
+	FloorStart  int     `json:"floor_start"`
+	FloorEnd    int     `json:"floor_end"`
 }
 
 // Create handles POST /api/v1/rooms
@@ -39,19 +40,20 @@ func (h *RoomHandler) Create(c *gin.Context) {
 		return
 	}
 
-	dwellingID, err := uuid.Parse(req.DwellingID)
+	structureID, err := uuid.Parse(req.StructureID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid dwelling_id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid structure_id"})
 		return
 	}
 
 	input := service.CreateRoomInput{
-		DwellingID:  dwellingID,
+		StructureID: structureID,
 		Name:        req.Name,
 		Type:        req.Type,
 		Description: req.Description,
 		SizeSqm:     req.SizeSqm,
-		Floor:       req.Floor,
+		FloorStart:  req.FloorStart,
+		FloorEnd:    req.FloorEnd,
 	}
 
 	room, err := h.roomSvc.Create(c.Request.Context(), input)

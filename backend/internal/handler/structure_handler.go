@@ -11,22 +11,22 @@ import (
 	"github.com/timlinux/PropertyForSale/backend/internal/service"
 )
 
-// DwellingHandler handles dwelling HTTP requests
-type DwellingHandler struct {
-	dwellingSvc *service.DwellingService
-	roomSvc     *service.RoomService
+// StructureHandler handles structure HTTP requests
+type StructureHandler struct {
+	structureSvc *service.StructureService
+	roomSvc      *service.RoomService
 }
 
-// NewDwellingHandler creates a new dwelling handler
-func NewDwellingHandler(dwellingSvc *service.DwellingService, roomSvc *service.RoomService) *DwellingHandler {
-	return &DwellingHandler{
-		dwellingSvc: dwellingSvc,
-		roomSvc:     roomSvc,
+// NewStructureHandler creates a new structure handler
+func NewStructureHandler(structureSvc *service.StructureService, roomSvc *service.RoomService) *StructureHandler {
+	return &StructureHandler{
+		structureSvc: structureSvc,
+		roomSvc:      roomSvc,
 	}
 }
 
-// CreateDwellingRequest represents the request body for creating a dwelling
-type CreateDwellingRequest struct {
+// CreateStructureRequest represents the request body for creating a structure
+type CreateStructureRequest struct {
 	PropertyID  string  `json:"property_id" binding:"required"`
 	Name        string  `json:"name" binding:"required"`
 	Type        string  `json:"type"`
@@ -36,9 +36,9 @@ type CreateDwellingRequest struct {
 	SizeSqm     float64 `json:"size_sqm"`
 }
 
-// Create handles POST /api/v1/dwellings
-func (h *DwellingHandler) Create(c *gin.Context) {
-	var req CreateDwellingRequest
+// Create handles POST /api/v1/structures
+func (h *StructureHandler) Create(c *gin.Context) {
+	var req CreateStructureRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -50,7 +50,7 @@ func (h *DwellingHandler) Create(c *gin.Context) {
 		return
 	}
 
-	input := service.CreateDwellingInput{
+	input := service.CreateStructureInput{
 		PropertyID:  propertyID,
 		Name:        req.Name,
 		Type:        req.Type,
@@ -60,34 +60,34 @@ func (h *DwellingHandler) Create(c *gin.Context) {
 		SizeSqm:     req.SizeSqm,
 	}
 
-	dwelling, err := h.dwellingSvc.Create(c.Request.Context(), input)
+	structure, err := h.structureSvc.Create(c.Request.Context(), input)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, dwelling)
+	c.JSON(http.StatusCreated, structure)
 }
 
-// Get handles GET /api/v1/dwellings/:id
-func (h *DwellingHandler) Get(c *gin.Context) {
+// Get handles GET /api/v1/structures/:id
+func (h *StructureHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	dwelling, err := h.dwellingSvc.GetByID(c.Request.Context(), id)
+	structure, err := h.structureSvc.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "dwelling not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "structure not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, dwelling)
+	c.JSON(http.StatusOK, structure)
 }
 
-// Update handles PUT /api/v1/dwellings/:id
-func (h *DwellingHandler) Update(c *gin.Context) {
+// Update handles PUT /api/v1/structures/:id
+func (h *StructureHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
@@ -100,7 +100,7 @@ func (h *DwellingHandler) Update(c *gin.Context) {
 		return
 	}
 
-	input := service.UpdateDwellingInput{}
+	input := service.UpdateStructureInput{}
 	if v, ok := req["name"].(string); ok {
 		input.Name = &v
 	}
@@ -111,24 +111,24 @@ func (h *DwellingHandler) Update(c *gin.Context) {
 		input.Description = &v
 	}
 
-	dwelling, err := h.dwellingSvc.Update(c.Request.Context(), id, input)
+	structure, err := h.structureSvc.Update(c.Request.Context(), id, input)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, dwelling)
+	c.JSON(http.StatusOK, structure)
 }
 
-// Delete handles DELETE /api/v1/dwellings/:id
-func (h *DwellingHandler) Delete(c *gin.Context) {
+// Delete handles DELETE /api/v1/structures/:id
+func (h *StructureHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	if err := h.dwellingSvc.Delete(c.Request.Context(), id); err != nil {
+	if err := h.structureSvc.Delete(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -136,15 +136,15 @@ func (h *DwellingHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
-// ListRooms handles GET /api/v1/dwellings/:id/rooms
-func (h *DwellingHandler) ListRooms(c *gin.Context) {
+// ListRooms handles GET /api/v1/structures/:id/rooms
+func (h *StructureHandler) ListRooms(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	rooms, err := h.roomSvc.ListByDwellingID(c.Request.Context(), id)
+	rooms, err := h.roomSvc.ListByStructureID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

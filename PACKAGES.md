@@ -24,9 +24,9 @@ Business entities with no external dependencies.
 
 | Package | Path | Purpose |
 |---------|------|---------|
-| `property` | `backend/internal/domain/property/` | Property entity and value objects |
-| `dwelling` | `backend/internal/domain/dwelling/` | Dwelling entity (buildings within property) |
-| `room` | `backend/internal/domain/room/` | Room entity (spaces within dwelling) |
+| `property` | `backend/internal/domain/property/` | Property, Structure, Room, and Area entities |
+| `structure` | `backend/internal/domain/property/` | Structure entity (buildings, barns, sheds within property) |
+| `room` | `backend/internal/domain/property/` | Room entity (spaces within structures) |
 | `area` | `backend/internal/domain/area/` | Area entity (gardens, fields, outdoor spaces) |
 | `media` | `backend/internal/domain/media/` | Media entity (images, videos, audio, documents, 3D models) |
 | `user` | `backend/internal/domain/user/` | User entity and authentication data |

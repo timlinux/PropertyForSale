@@ -13,12 +13,12 @@ import (
 	"github.com/timlinux/PropertyForSale/backend/internal/domain/property"
 )
 
-func TestDwellingRepository_Create(t *testing.T) {
+func TestStructureRepository_Create(t *testing.T) {
 	db := setupTestDB(t)
 	defer cleanupTestDB(t, db)
 
 	propRepo := NewPropertyRepository(db)
-	dwellingRepo := NewDwellingRepository(db)
+	structureRepo := NewStructureRepository(db)
 	ctx := context.Background()
 
 	// Create parent property
@@ -31,13 +31,13 @@ func TestDwellingRepository_Create(t *testing.T) {
 	require.NoError(t, propRepo.Create(ctx, prop))
 
 	tests := []struct {
-		name     string
-		dwelling *property.Dwelling
-		wantErr  bool
+		name      string
+		structure *property.Structure
+		wantErr   bool
 	}{
 		{
-			name: "create valid dwelling",
-			dwelling: &property.Dwelling{
+			name: "create valid structure",
+			structure: &property.Structure{
 				ID:          uuid.New(),
 				PropertyID:  prop.ID,
 				Name:        "Main House",
@@ -50,8 +50,8 @@ func TestDwellingRepository_Create(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "create dwelling with minimum fields",
-			dwelling: &property.Dwelling{
+			name: "create structure with minimum fields",
+			structure: &property.Structure{
 				ID:         uuid.New(),
 				PropertyID: prop.ID,
 				Name:       "Barn",
@@ -62,7 +62,7 @@ func TestDwellingRepository_Create(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := dwellingRepo.Create(ctx, tt.dwelling)
+			err := structureRepo.Create(ctx, tt.structure)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -72,12 +72,12 @@ func TestDwellingRepository_Create(t *testing.T) {
 	}
 }
 
-func TestDwellingRepository_GetByID(t *testing.T) {
+func TestStructureRepository_GetByID(t *testing.T) {
 	db := setupTestDB(t)
 	defer cleanupTestDB(t, db)
 
 	propRepo := NewPropertyRepository(db)
-	dwellingRepo := NewDwellingRepository(db)
+	structureRepo := NewStructureRepository(db)
 	ctx := context.Background()
 
 	// Create parent property
@@ -85,12 +85,12 @@ func TestDwellingRepository_GetByID(t *testing.T) {
 		ID:      uuid.New(),
 		OwnerID: uuid.New(),
 		Name:    "Test Property",
-		Slug:    "test-property-dwelling",
+		Slug:    "test-property-structure",
 	}
 	require.NoError(t, propRepo.Create(ctx, prop))
 
-	// Create a dwelling
-	dwelling := &property.Dwelling{
+	// Create a structure
+	structure := &property.Structure{
 		ID:          uuid.New(),
 		PropertyID:  prop.ID,
 		Name:        "Main House",
@@ -100,7 +100,7 @@ func TestDwellingRepository_GetByID(t *testing.T) {
 		YearBuilt:   2020,
 		SizeSqm:     200,
 	}
-	require.NoError(t, dwellingRepo.Create(ctx, dwelling))
+	require.NoError(t, structureRepo.Create(ctx, structure))
 
 	tests := []struct {
 		name    string
@@ -108,12 +108,12 @@ func TestDwellingRepository_GetByID(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "get existing dwelling",
-			id:      dwelling.ID,
+			name:    "get existing structure",
+			id:      structure.ID,
 			wantErr: false,
 		},
 		{
-			name:    "get non-existent dwelling",
+			name:    "get non-existent structure",
 			id:      uuid.New(),
 			wantErr: true,
 		},
@@ -121,26 +121,26 @@ func TestDwellingRepository_GetByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := dwellingRepo.GetByID(ctx, tt.id)
+			result, err := structureRepo.GetByID(ctx, tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, result)
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
-				assert.Equal(t, dwelling.Name, result.Name)
-				assert.Equal(t, dwelling.Type, result.Type)
+				assert.Equal(t, structure.Name, result.Name)
+				assert.Equal(t, structure.Type, result.Type)
 			}
 		})
 	}
 }
 
-func TestDwellingRepository_ListByPropertyID(t *testing.T) {
+func TestStructureRepository_ListByPropertyID(t *testing.T) {
 	db := setupTestDB(t)
 	defer cleanupTestDB(t, db)
 
 	propRepo := NewPropertyRepository(db)
-	dwellingRepo := NewDwellingRepository(db)
+	structureRepo := NewStructureRepository(db)
 	ctx := context.Background()
 
 	// Create two properties
@@ -160,8 +160,8 @@ func TestDwellingRepository_ListByPropertyID(t *testing.T) {
 	}
 	require.NoError(t, propRepo.Create(ctx, prop2))
 
-	// Create dwellings for property 1
-	dwellings := []*property.Dwelling{
+	// Create structures for property 1
+	structures := []*property.Structure{
 		{
 			ID:         uuid.New(),
 			PropertyID: prop1.ID,
@@ -177,40 +177,40 @@ func TestDwellingRepository_ListByPropertyID(t *testing.T) {
 			SortOrder:  2,
 		},
 	}
-	for _, d := range dwellings {
-		require.NoError(t, dwellingRepo.Create(ctx, d))
+	for _, d := range structures {
+		require.NoError(t, structureRepo.Create(ctx, d))
 	}
 
-	// Create dwelling for property 2
-	dwelling3 := &property.Dwelling{
+	// Create structure for property 2
+	structure3 := &property.Structure{
 		ID:         uuid.New(),
 		PropertyID: prop2.ID,
 		Name:       "Apartment",
 		Type:       "apartment",
 	}
-	require.NoError(t, dwellingRepo.Create(ctx, dwelling3))
+	require.NoError(t, structureRepo.Create(ctx, structure3))
 
 	// Test listing
-	results, err := dwellingRepo.ListByPropertyID(ctx, prop1.ID)
+	results, err := structureRepo.ListByPropertyID(ctx, prop1.ID)
 	assert.NoError(t, err)
 	assert.Len(t, results, 2)
 
-	results2, err := dwellingRepo.ListByPropertyID(ctx, prop2.ID)
+	results2, err := structureRepo.ListByPropertyID(ctx, prop2.ID)
 	assert.NoError(t, err)
 	assert.Len(t, results2, 1)
 
 	// Non-existent property
-	results3, err := dwellingRepo.ListByPropertyID(ctx, uuid.New())
+	results3, err := structureRepo.ListByPropertyID(ctx, uuid.New())
 	assert.NoError(t, err)
 	assert.Len(t, results3, 0)
 }
 
-func TestDwellingRepository_Update(t *testing.T) {
+func TestStructureRepository_Update(t *testing.T) {
 	db := setupTestDB(t)
 	defer cleanupTestDB(t, db)
 
 	propRepo := NewPropertyRepository(db)
-	dwellingRepo := NewDwellingRepository(db)
+	structureRepo := NewStructureRepository(db)
 	ctx := context.Background()
 
 	// Create parent property
@@ -222,8 +222,8 @@ func TestDwellingRepository_Update(t *testing.T) {
 	}
 	require.NoError(t, propRepo.Create(ctx, prop))
 
-	// Create a dwelling
-	dwelling := &property.Dwelling{
+	// Create a structure
+	structure := &property.Structure{
 		ID:          uuid.New(),
 		PropertyID:  prop.ID,
 		Name:        "Original Name",
@@ -232,19 +232,19 @@ func TestDwellingRepository_Update(t *testing.T) {
 		FloorCount:  1,
 		SizeSqm:     100,
 	}
-	require.NoError(t, dwellingRepo.Create(ctx, dwelling))
+	require.NoError(t, structureRepo.Create(ctx, structure))
 
-	// Update the dwelling
-	dwelling.Name = "Updated Name"
-	dwelling.Description = "Updated description"
-	dwelling.FloorCount = 2
-	dwelling.SizeSqm = 150
+	// Update the structure
+	structure.Name = "Updated Name"
+	structure.Description = "Updated description"
+	structure.FloorCount = 2
+	structure.SizeSqm = 150
 
-	err := dwellingRepo.Update(ctx, dwelling)
+	err := structureRepo.Update(ctx, structure)
 	assert.NoError(t, err)
 
 	// Verify update
-	updated, err := dwellingRepo.GetByID(ctx, dwelling.ID)
+	updated, err := structureRepo.GetByID(ctx, structure.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "Updated Name", updated.Name)
 	assert.Equal(t, "Updated description", updated.Description)
@@ -252,12 +252,12 @@ func TestDwellingRepository_Update(t *testing.T) {
 	assert.Equal(t, float64(150), updated.SizeSqm)
 }
 
-func TestDwellingRepository_Delete(t *testing.T) {
+func TestStructureRepository_Delete(t *testing.T) {
 	db := setupTestDB(t)
 	defer cleanupTestDB(t, db)
 
 	propRepo := NewPropertyRepository(db)
-	dwellingRepo := NewDwellingRepository(db)
+	structureRepo := NewStructureRepository(db)
 	ctx := context.Background()
 
 	// Create parent property
@@ -269,19 +269,19 @@ func TestDwellingRepository_Delete(t *testing.T) {
 	}
 	require.NoError(t, propRepo.Create(ctx, prop))
 
-	// Create a dwelling
-	dwelling := &property.Dwelling{
+	// Create a structure
+	structure := &property.Structure{
 		ID:         uuid.New(),
 		PropertyID: prop.ID,
 		Name:       "To Be Deleted",
 	}
-	require.NoError(t, dwellingRepo.Create(ctx, dwelling))
+	require.NoError(t, structureRepo.Create(ctx, structure))
 
-	// Delete the dwelling
-	err := dwellingRepo.Delete(ctx, dwelling.ID)
+	// Delete the structure
+	err := structureRepo.Delete(ctx, structure.ID)
 	assert.NoError(t, err)
 
 	// Verify deletion
-	_, err = dwellingRepo.GetByID(ctx, dwelling.ID)
+	_, err = structureRepo.GetByID(ctx, structure.ID)
 	assert.Error(t, err)
 }

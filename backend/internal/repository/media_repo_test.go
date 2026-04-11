@@ -163,11 +163,11 @@ func TestMediaRepository_ListByEntity(t *testing.T) {
 	defer cleanupTestDB(t, db)
 
 	propRepo := NewPropertyRepository(db)
-	dwellingRepo := NewDwellingRepository(db)
+	structureRepo := NewStructureRepository(db)
 	mediaRepo := NewMediaRepository(db)
 	ctx := context.Background()
 
-	// Create property and dwelling
+	// Create property and structure
 	prop := &property.Property{
 		ID:      uuid.New(),
 		OwnerID: uuid.New(),
@@ -176,12 +176,12 @@ func TestMediaRepository_ListByEntity(t *testing.T) {
 	}
 	require.NoError(t, propRepo.Create(ctx, prop))
 
-	dwelling := &property.Dwelling{
+	structure := &property.Structure{
 		ID:         uuid.New(),
 		PropertyID: prop.ID,
 		Name:       "Main House",
 	}
-	require.NoError(t, dwellingRepo.Create(ctx, dwelling))
+	require.NoError(t, structureRepo.Create(ctx, structure))
 
 	// Create media for property
 	propertyMedia := []*media.Media{
@@ -208,24 +208,24 @@ func TestMediaRepository_ListByEntity(t *testing.T) {
 		require.NoError(t, mediaRepo.Create(ctx, m))
 	}
 
-	// Create media for dwelling
-	dwellingMedia := &media.Media{
+	// Create media for structure
+	structureMedia := &media.Media{
 		ID:         uuid.New(),
-		EntityType: media.EntityTypeDwelling,
-		EntityID:   dwelling.ID,
+		EntityType: media.EntityTypeStructure,
+		EntityID:   structure.ID,
 		Type:       media.MediaTypeImage,
-		URL:        "/uploads/dwelling1.jpg",
-		FileName:   "dwelling1.jpg",
+		URL:        "/uploads/structure1.jpg",
+		FileName:   "structure1.jpg",
 	}
-	require.NoError(t, mediaRepo.Create(ctx, dwellingMedia))
+	require.NoError(t, mediaRepo.Create(ctx, structureMedia))
 
 	// Test listing by property
 	results, err := mediaRepo.ListByEntity(ctx, media.EntityTypeProperty, prop.ID)
 	assert.NoError(t, err)
 	assert.Len(t, results, 2)
 
-	// Test listing by dwelling
-	results2, err := mediaRepo.ListByEntity(ctx, media.EntityTypeDwelling, dwelling.ID)
+	// Test listing by structure
+	results2, err := mediaRepo.ListByEntity(ctx, media.EntityTypeStructure, structure.ID)
 	assert.NoError(t, err)
 	assert.Len(t, results2, 1)
 

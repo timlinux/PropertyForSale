@@ -352,12 +352,12 @@ func TestPropertyRepository_Delete(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestPropertyRepository_WithDwellingsAndAreas(t *testing.T) {
+func TestPropertyRepository_WithStructuresAndAreas(t *testing.T) {
 	db := setupTestDB(t)
 	defer cleanupTestDB(t, db)
 
 	propRepo := NewPropertyRepository(db)
-	dwellingRepo := NewDwellingRepository(db)
+	structureRepo := NewStructureRepository(db)
 	areaRepo := NewAreaRepository(db)
 	ctx := context.Background()
 
@@ -371,8 +371,8 @@ func TestPropertyRepository_WithDwellingsAndAreas(t *testing.T) {
 	}
 	require.NoError(t, propRepo.Create(ctx, prop))
 
-	// Create dwellings
-	dwelling := &property.Dwelling{
+	// Create structures
+	structure := &property.Structure{
 		ID:          uuid.New(),
 		PropertyID:  prop.ID,
 		Name:        "Main House",
@@ -381,7 +381,7 @@ func TestPropertyRepository_WithDwellingsAndAreas(t *testing.T) {
 		FloorCount:  2,
 		SizeSqm:     250,
 	}
-	require.NoError(t, dwellingRepo.Create(ctx, dwelling))
+	require.NoError(t, structureRepo.Create(ctx, structure))
 
 	// Create areas
 	area := &property.Area{
@@ -397,8 +397,8 @@ func TestPropertyRepository_WithDwellingsAndAreas(t *testing.T) {
 	// Get property with relations
 	result, err := propRepo.GetByID(ctx, prop.ID)
 	require.NoError(t, err)
-	assert.Len(t, result.Dwellings, 1)
-	assert.Equal(t, "Main House", result.Dwellings[0].Name)
+	assert.Len(t, result.Structures, 1)
+	assert.Equal(t, "Main House", result.Structures[0].Name)
 	assert.Len(t, result.Areas, 1)
 	assert.Equal(t, "Garden", result.Areas[0].Name)
 }

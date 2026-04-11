@@ -49,7 +49,7 @@ import {
 } from '@chakra-ui/react'
 import { FiPlus, FiTrash2, FiHome, FiLayers, FiMapPin, FiStar, FiEdit2 } from 'react-icons/fi'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, Property, Dwelling, Room, Area, Quote } from '../../api'
+import { api, Property, Structure, Room, Area, Quote } from '../../api'
 import { useAuthHeaders } from '../../context/authStore'
 import { MediaPreviewCard } from '../media'
 
@@ -97,7 +97,7 @@ export default function PropertyEdit() {
       <Tabs colorScheme="blue" variant="enclosed">
         <TabList>
           <Tab>Basic Info</Tab>
-          <Tab>Dwellings & Rooms</Tab>
+          <Tab>Structures & Rooms</Tab>
           <Tab>Outdoor Areas</Tab>
           <Tab>Media</Tab>
           <Tab>Quotes</Tab>
@@ -108,7 +108,7 @@ export default function PropertyEdit() {
             <BasicInfoTab property={property} />
           </TabPanel>
           <TabPanel px={0}>
-            <DwellingsTab property={property} />
+            <StructuresTab property={property} />
           </TabPanel>
           <TabPanel px={0}>
             <AreasTab property={property} />
@@ -282,36 +282,36 @@ function BasicInfoTab({ property }: { property: Property }) {
   )
 }
 
-// Dwellings Tab
-function DwellingsTab({ property }: { property: Property }) {
+// Structures Tab
+function StructuresTab({ property }: { property: Property }) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const authHeaders = useAuthHeaders()
   const { isOpen, onOpen, onClose } = useDisclosure()
 
-  const { data: dwellingsData } = useQuery({
-    queryKey: ['dwellings', property.slug],
-    queryFn: () => api.getPropertyDwellings(property.slug),
+  const { data: structuresData } = useQuery({
+    queryKey: ['structures', property.slug],
+    queryFn: () => api.getPropertyStructures(property.slug),
   })
 
-  const dwellings = dwellingsData?.data || []
+  const structures = structuresData?.data || []
 
-  const createDwellingMutation = useMutation({
-    mutationFn: async (data: Partial<Dwelling>) => {
-      const response = await fetch('/api/v1/dwellings', {
+  const createStructureMutation = useMutation({
+    mutationFn: async (data: Partial<Structure>) => {
+      const response = await fetch('/api/v1/structures', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ ...data, property_id: property.id }),
       })
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to create dwelling')
+        throw new Error(errorData.error || 'Failed to create structure')
       }
       return response.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dwellings', property.slug] })
-      toast({ title: 'Dwelling created', status: 'success', duration: 3000 })
+      queryClient.invalidateQueries({ queryKey: ['structures', property.slug] })
+      toast({ title: 'Structure created', status: 'success', duration: 3000 })
       onClose()
     },
     onError: (error: Error) => {
@@ -319,70 +319,70 @@ function DwellingsTab({ property }: { property: Property }) {
     },
   })
 
-  const deleteDwellingMutation = useMutation({
+  const deleteStructureMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/v1/dwellings/${id}`, {
+      const response = await fetch(`/api/v1/structures/${id}`, {
         method: 'DELETE',
         headers: authHeaders,
       })
       if (!response.ok) throw new Error('Failed to delete')
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dwellings', property.slug] })
-      toast({ title: 'Dwelling deleted', status: 'success', duration: 3000 })
+      queryClient.invalidateQueries({ queryKey: ['structures', property.slug] })
+      toast({ title: 'Structure deleted', status: 'success', duration: 3000 })
     },
   })
 
   return (
     <VStack spacing={4} align="stretch">
       <HStack justify="space-between">
-        <Text color="gray.600">Manage dwellings (buildings) on this property</Text>
+        <Text color="gray.600">Manage structures (buildings) on this property</Text>
         <Button leftIcon={<FiPlus />} colorScheme="blue" size="sm" onClick={onOpen}>
-          Add Dwelling
+          Add Structure
         </Button>
       </HStack>
 
-      {dwellings.length === 0 ? (
+      {structures.length === 0 ? (
         <Card>
           <CardBody>
             <VStack py={8} spacing={4}>
               <FiHome size={48} color="gray" />
-              <Text color="gray.500">No dwellings yet</Text>
-              <Button leftIcon={<FiPlus />} onClick={onOpen}>Add First Dwelling</Button>
+              <Text color="gray.500">No structures yet</Text>
+              <Button leftIcon={<FiPlus />} onClick={onOpen}>Add First Structure</Button>
             </VStack>
           </CardBody>
         </Card>
       ) : (
         <Accordion allowMultiple>
-          {dwellings.map((dwelling) => (
-            <DwellingItem
-              key={dwelling.id}
-              dwelling={dwelling}
-              onDelete={() => deleteDwellingMutation.mutate(dwelling.id)}
+          {structures.map((structure) => (
+            <StructureItem
+              key={structure.id}
+              structure={structure}
+              onDelete={() => deleteStructureMutation.mutate(structure.id)}
             />
           ))}
         </Accordion>
       )}
 
-      <DwellingModal
+      <StructureModal
         isOpen={isOpen}
         onClose={onClose}
-        onSave={(data) => createDwellingMutation.mutate(data)}
-        isLoading={createDwellingMutation.isPending}
+        onSave={(data) => createStructureMutation.mutate(data)}
+        isLoading={createStructureMutation.isPending}
       />
     </VStack>
   )
 }
 
-function DwellingItem({ dwelling, onDelete }: { dwelling: Dwelling; onDelete: () => void }) {
+function StructureItem({ structure, onDelete }: { structure: Structure; onDelete: () => void }) {
   const authHeaders = useAuthHeaders()
   const queryClient = useQueryClient()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
 
   const { data: roomsData } = useQuery({
-    queryKey: ['rooms', dwelling.id],
-    queryFn: () => api.getDwellingRooms(dwelling.id),
+    queryKey: ['rooms', structure.id],
+    queryFn: () => api.getStructureRooms(structure.id),
   })
 
   const rooms = roomsData?.data || []
@@ -392,7 +392,7 @@ function DwellingItem({ dwelling, onDelete }: { dwelling: Dwelling; onDelete: ()
       const response = await fetch('/api/v1/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ ...data, dwelling_id: dwelling.id }),
+        body: JSON.stringify({ ...data, structure_id: structure.id }),
       })
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
@@ -401,7 +401,7 @@ function DwellingItem({ dwelling, onDelete }: { dwelling: Dwelling; onDelete: ()
       return response.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', dwelling.id] })
+      queryClient.invalidateQueries({ queryKey: ['rooms', structure.id] })
       toast({ title: 'Room created', status: 'success', duration: 3000 })
       onClose()
     },
@@ -419,7 +419,7 @@ function DwellingItem({ dwelling, onDelete }: { dwelling: Dwelling; onDelete: ()
       if (!response.ok) throw new Error('Failed to delete')
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', dwelling.id] })
+      queryClient.invalidateQueries({ queryKey: ['rooms', structure.id] })
       toast({ title: 'Room deleted', status: 'success', duration: 3000 })
     },
   })
@@ -429,8 +429,8 @@ function DwellingItem({ dwelling, onDelete }: { dwelling: Dwelling; onDelete: ()
       <AccordionButton>
         <HStack flex={1}>
           <FiHome />
-          <Text fontWeight="600">{dwelling.name}</Text>
-          {dwelling.type && <Text color="gray.500">({dwelling.type})</Text>}
+          <Text fontWeight="600">{structure.name}</Text>
+          {structure.type && <Text color="gray.500">({structure.type})</Text>}
         </HStack>
         <IconButton
           aria-label="Delete"
@@ -448,22 +448,22 @@ function DwellingItem({ dwelling, onDelete }: { dwelling: Dwelling; onDelete: ()
           <SimpleGrid columns={3} spacing={4}>
             <Box>
               <Text fontSize="sm" color="gray.500">Type</Text>
-              <Text>{dwelling.type || '-'}</Text>
+              <Text>{structure.type || '-'}</Text>
             </Box>
             <Box>
               <Text fontSize="sm" color="gray.500">Size</Text>
-              <Text>{dwelling.size_sqm ? `${dwelling.size_sqm} m²` : '-'}</Text>
+              <Text>{structure.size_sqm ? `${structure.size_sqm} m²` : '-'}</Text>
             </Box>
             <Box>
               <Text fontSize="sm" color="gray.500">Year Built</Text>
-              <Text>{dwelling.year_built || '-'}</Text>
+              <Text>{structure.year_built || '-'}</Text>
             </Box>
           </SimpleGrid>
 
-          {dwelling.description && (
+          {structure.description && (
             <Box>
               <Text fontSize="sm" color="gray.500">Description</Text>
-              <Text>{dwelling.description}</Text>
+              <Text>{structure.description}</Text>
             </Box>
           )}
 
@@ -633,7 +633,7 @@ function MediaTab({ property }: { property: Property }) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isDragOver, setIsDragOver] = useState(false)
-  const [selectedEntityType, setSelectedEntityType] = useState<'property' | 'dwelling' | 'room' | 'area'>('property')
+  const [selectedEntityType, setSelectedEntityType] = useState<'property' | 'structure' | 'room' | 'area'>('property')
   const [selectedEntityId, setSelectedEntityId] = useState<string>(property.id)
   const [editingMedia, setEditingMedia] = useState<{
     id: string
@@ -641,12 +641,12 @@ function MediaTab({ property }: { property: Property }) {
     linkedAudioId: string | null
   } | null>(null)
 
-  // Fetch dwellings
-  const { data: dwellingsData } = useQuery({
-    queryKey: ['dwellings', property.slug],
-    queryFn: () => api.getPropertyDwellings(property.slug),
+  // Fetch structures
+  const { data: structuresData } = useQuery({
+    queryKey: ['structures', property.slug],
+    queryFn: () => api.getPropertyStructures(property.slug),
   })
-  const dwellings = dwellingsData?.data || []
+  const structures = structuresData?.data || []
 
   // Fetch areas
   const { data: areasData } = useQuery({
@@ -655,12 +655,12 @@ function MediaTab({ property }: { property: Property }) {
   })
   const areas = areasData?.data || []
 
-  // Build rooms list from all dwellings
-  const allRooms: Array<Room & { dwellingName: string }> = []
-  dwellings.forEach((dwelling: Dwelling) => {
-    if (dwelling.rooms) {
-      dwelling.rooms.forEach((room: Room) => {
-        allRooms.push({ ...room, dwellingName: dwelling.name })
+  // Build rooms list from all structures
+  const allRooms: Array<Room & { structureName: string }> = []
+  structures.forEach((structure: Structure) => {
+    if (structure.rooms) {
+      structure.rooms.forEach((room: Room) => {
+        allRooms.push({ ...room, structureName: structure.name })
       })
     }
   })
@@ -720,12 +720,12 @@ function MediaTab({ property }: { property: Property }) {
   const audioFiles = media.filter((m) => m.type === 'audio')
 
   // Update selected entity ID when type changes
-  const handleEntityTypeChange = (type: 'property' | 'dwelling' | 'room' | 'area') => {
+  const handleEntityTypeChange = (type: 'property' | 'structure' | 'room' | 'area') => {
     setSelectedEntityType(type)
     if (type === 'property') {
       setSelectedEntityId(property.id)
-    } else if (type === 'dwelling' && dwellings.length > 0) {
-      setSelectedEntityId(dwellings[0].id)
+    } else if (type === 'structure' && structures.length > 0) {
+      setSelectedEntityId(structures[0].id)
     } else if (type === 'room' && allRooms.length > 0) {
       setSelectedEntityId(allRooms[0].id)
     } else if (type === 'area' && areas.length > 0) {
@@ -803,9 +803,9 @@ function MediaTab({ property }: { property: Property }) {
 
   const getEntityLabel = (entityType: string, entityId: string) => {
     if (entityType === 'property') return 'Property'
-    if (entityType === 'dwelling') {
-      const d = dwellings.find((d: Dwelling) => d.id === entityId)
-      return d ? `Dwelling: ${d.name}` : 'Dwelling'
+    if (entityType === 'structure') {
+      const d = structures.find((d: Structure) => d.id === entityId)
+      return d ? `Structure: ${d.name}` : 'Structure'
     }
     if (entityType === 'room') {
       const r = allRooms.find(r => r.id === entityId)
@@ -833,8 +833,8 @@ function MediaTab({ property }: { property: Property }) {
                   onChange={(e) => handleEntityTypeChange(e.target.value as typeof selectedEntityType)}
                 >
                   <option value="property">Whole Property</option>
-                  <option value="dwelling" disabled={dwellings.length === 0}>
-                    Dwelling {dwellings.length === 0 && '(none added)'}
+                  <option value="structure" disabled={structures.length === 0}>
+                    Structure {structures.length === 0 && '(none added)'}
                   </option>
                   <option value="room" disabled={allRooms.length === 0}>
                     Room {allRooms.length === 0 && '(none added)'}
@@ -848,7 +848,7 @@ function MediaTab({ property }: { property: Property }) {
               {selectedEntityType !== 'property' && (
                 <FormControl>
                   <FormLabel>
-                    {selectedEntityType === 'dwelling' && 'Select Dwelling'}
+                    {selectedEntityType === 'structure' && 'Select Structure'}
                     {selectedEntityType === 'room' && 'Select Room'}
                     {selectedEntityType === 'area' && 'Select Area'}
                   </FormLabel>
@@ -856,14 +856,14 @@ function MediaTab({ property }: { property: Property }) {
                     value={selectedEntityId}
                     onChange={(e) => setSelectedEntityId(e.target.value)}
                   >
-                    {selectedEntityType === 'dwelling' &&
-                      dwellings.map((d: Dwelling) => (
+                    {selectedEntityType === 'structure' &&
+                      structures.map((d: Structure) => (
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))
                     }
                     {selectedEntityType === 'room' &&
                       allRooms.map((r) => (
-                        <option key={r.id} value={r.id}>{r.dwellingName} → {r.name}</option>
+                        <option key={r.id} value={r.id}>{r.structureName} → {r.name}</option>
                       ))
                     }
                     {selectedEntityType === 'area' &&
@@ -1044,7 +1044,7 @@ function MediaTab({ property }: { property: Property }) {
             <Text fontWeight="500" mb={2}>All Property Media ({media.length} total)</Text>
             <HStack spacing={4} flexWrap="wrap">
               <Badge>Property: {media.filter(m => m.entity_type === 'property').length}</Badge>
-              <Badge>Dwellings: {media.filter(m => m.entity_type === 'dwelling').length}</Badge>
+              <Badge>Structures: {media.filter(m => m.entity_type === 'structure').length}</Badge>
               <Badge>Rooms: {media.filter(m => m.entity_type === 'room').length}</Badge>
               <Badge>Areas: {media.filter(m => m.entity_type === 'area').length}</Badge>
             </HStack>
@@ -1117,7 +1117,7 @@ function MediaTab({ property }: { property: Property }) {
 }
 
 // Modals
-function DwellingModal({
+function StructureModal({
   isOpen,
   onClose,
   onSave,
@@ -1125,7 +1125,7 @@ function DwellingModal({
 }: {
   isOpen: boolean
   onClose: () => void
-  onSave: (data: Partial<Dwelling>) => void
+  onSave: (data: Partial<Structure>) => void
   isLoading: boolean
 }) {
   const [formData, setFormData] = useState({
@@ -1151,7 +1151,7 @@ function DwellingModal({
     <Modal isOpen={isOpen} onClose={handleClose}>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Add Dwelling</ModalHeader>
+        <ModalHeader>Add Structure</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <VStack spacing={4}>
@@ -1176,6 +1176,7 @@ function DwellingModal({
                 <option value="cottage">Cottage</option>
                 <option value="barn">Barn</option>
                 <option value="garage">Garage</option>
+                <option value="shed">Shed</option>
                 <option value="other">Other</option>
               </Select>
             </FormControl>
@@ -1217,7 +1218,7 @@ function DwellingModal({
         <ModalFooter>
           <Button variant="ghost" mr={3} onClick={handleClose}>Cancel</Button>
           <Button colorScheme="blue" onClick={handleSubmit} isLoading={isLoading}>
-            Add Dwelling
+            Add Structure
           </Button>
         </ModalFooter>
       </ModalContent>

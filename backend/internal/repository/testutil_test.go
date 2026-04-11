@@ -42,7 +42,7 @@ type testProperty struct {
 
 func (testProperty) TableName() string { return "properties" }
 
-type testDwelling struct {
+type testStructure struct {
 	ID          uuid.UUID `gorm:"type:text;primaryKey"`
 	PropertyID  uuid.UUID `gorm:"type:text;not null;index"`
 	Name        string    `gorm:"not null"`
@@ -56,16 +56,17 @@ type testDwelling struct {
 	UpdatedAt   time.Time
 }
 
-func (testDwelling) TableName() string { return "dwellings" }
+func (testStructure) TableName() string { return "structures" }
 
 type testRoom struct {
 	ID          uuid.UUID `gorm:"type:text;primaryKey"`
-	DwellingID  uuid.UUID `gorm:"type:text;not null;index"`
+	StructureID uuid.UUID `gorm:"type:text;not null;index"`
 	Name        string    `gorm:"not null"`
 	Type        string
 	Description string
 	SizeSqm     float64
-	Floor       int
+	FloorStart  int
+	FloorEnd    int
 	SortOrder   int `gorm:"default:0"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -88,23 +89,26 @@ type testArea struct {
 func (testArea) TableName() string { return "areas" }
 
 type testMedia struct {
-	ID           uuid.UUID `gorm:"type:text;primaryKey"`
-	EntityType   string    `gorm:"not null;index:idx_media_entity"`
-	EntityID     uuid.UUID `gorm:"type:text;not null;index:idx_media_entity"`
-	Type         string    `gorm:"not null"`
-	URL          string    `gorm:"not null"`
-	ThumbnailURL string
-	FileName     string
-	FileSize     int64
-	MimeType     string
-	Width        int
-	Height       int
-	Duration     float64
-	Autoplay     bool   `gorm:"default:false"`
-	Metadata     string `gorm:"type:text;default:'{}'"`
-	SortOrder    int    `gorm:"default:0"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID            uuid.UUID  `gorm:"type:text;primaryKey"`
+	EntityType    string     `gorm:"not null;index:idx_media_entity"`
+	EntityID      uuid.UUID  `gorm:"type:text;not null;index:idx_media_entity"`
+	Type          string     `gorm:"not null"`
+	URL           string     `gorm:"not null"`
+	ThumbnailURL  string
+	FileName      string
+	FileSize      int64
+	MimeType      string
+	Width         int
+	Height        int
+	Duration      float64
+	Caption       string
+	LinkedAudioID *uuid.UUID `gorm:"type:text"`
+	Autoplay      bool       `gorm:"default:false"`
+	Starred       bool       `gorm:"default:false"`
+	Metadata      string     `gorm:"type:text;default:'{}'"`
+	SortOrder     int        `gorm:"default:0"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 func (testMedia) TableName() string { return "media" }
@@ -245,7 +249,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	// Auto-migrate SQLite-compatible test models
 	err = db.AutoMigrate(
 		&testProperty{},
-		&testDwelling{},
+		&testStructure{},
 		&testRoom{},
 		&testArea{},
 		&testMedia{},

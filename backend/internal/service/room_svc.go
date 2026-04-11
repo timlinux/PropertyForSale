@@ -29,24 +29,26 @@ func NewRoomService(roomRepo repository.RoomRepository, contentRepo repository.C
 
 // CreateRoomInput contains the data for creating a room
 type CreateRoomInput struct {
-	DwellingID  uuid.UUID
+	StructureID uuid.UUID
 	Name        string
 	Type        string
 	Description string
 	SizeSqm     float64
-	Floor       int
+	FloorStart  int
+	FloorEnd    int
 }
 
 // Create creates a new room
 func (s *RoomService) Create(ctx context.Context, input CreateRoomInput) (*property.Room, error) {
 	r := &property.Room{
 		ID:          uuid.New(), // Generate UUID for SQLite compatibility
-		DwellingID:  input.DwellingID,
+		StructureID: input.StructureID,
 		Name:        input.Name,
 		Type:        input.Type,
 		Description: input.Description,
 		SizeSqm:     input.SizeSqm,
-		Floor:       input.Floor,
+		FloorStart:  input.FloorStart,
+		FloorEnd:    input.FloorEnd,
 	}
 
 	if err := s.roomRepo.Create(ctx, r); err != nil {
@@ -61,9 +63,9 @@ func (s *RoomService) GetByID(ctx context.Context, id uuid.UUID) (*property.Room
 	return s.roomRepo.GetByID(ctx, id)
 }
 
-// ListByDwellingID retrieves rooms for a dwelling
-func (s *RoomService) ListByDwellingID(ctx context.Context, dwellingID uuid.UUID) ([]property.Room, error) {
-	return s.roomRepo.ListByDwellingID(ctx, dwellingID)
+// ListByStructureID retrieves rooms for a structure
+func (s *RoomService) ListByStructureID(ctx context.Context, structureID uuid.UUID) ([]property.Room, error) {
+	return s.roomRepo.ListByStructureID(ctx, structureID)
 }
 
 // UpdateRoomInput contains the data for updating a room
@@ -72,7 +74,8 @@ type UpdateRoomInput struct {
 	Type        *string
 	Description *string
 	SizeSqm     *float64
-	Floor       *int
+	FloorStart  *int
+	FloorEnd    *int
 	SortOrder   *int
 }
 
@@ -95,8 +98,11 @@ func (s *RoomService) Update(ctx context.Context, id uuid.UUID, input UpdateRoom
 	if input.SizeSqm != nil {
 		r.SizeSqm = *input.SizeSqm
 	}
-	if input.Floor != nil {
-		r.Floor = *input.Floor
+	if input.FloorStart != nil {
+		r.FloorStart = *input.FloorStart
+	}
+	if input.FloorEnd != nil {
+		r.FloorEnd = *input.FloorEnd
 	}
 	if input.SortOrder != nil {
 		r.SortOrder = *input.SortOrder

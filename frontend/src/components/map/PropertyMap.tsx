@@ -15,7 +15,7 @@ interface PropertyMapProps {
     lat: number
     lng: number
     label: string
-    type?: 'dwelling' | 'area' | 'property'
+    type?: 'structure' | 'area' | 'property'
     onClick?: () => void
   }>
   interactive?: boolean
@@ -98,7 +98,7 @@ export default function PropertyMap({
 
     // Add custom markers
     markers.forEach((markerData) => {
-      const color = markerData.type === 'dwelling' ? '#2d3748' :
+      const color = markerData.type === 'structure' ? '#2d3748' :
                     markerData.type === 'area' ? '#38a169' : '#c9a227'
 
       const el = document.createElement('div')

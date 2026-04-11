@@ -11,7 +11,7 @@ import (
 // Services holds all service implementations
 type Services struct {
 	Property  *PropertyService
-	Dwelling  *DwellingService
+	Structure *StructureService
 	Room      *RoomService
 	Area      *AreaService
 	Media     *MediaService
@@ -26,7 +26,7 @@ type Services struct {
 func NewServices(repos *repository.Repositories, _ interface{}, cfg *config.Config) *Services {
 	return &Services{
 		Property:  NewPropertyService(repos.Property, repos.Content),
-		Dwelling:  NewDwellingService(repos.Dwelling, repos.Content),
+		Structure: NewStructureService(repos.Structure, repos.Content),
 		Room:      NewRoomService(repos.Room, repos.Content),
 		Area:      NewAreaService(repos.Area, repos.Content),
 		Media:     NewMediaService(repos.Media, cfg),

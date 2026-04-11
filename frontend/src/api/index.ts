@@ -26,7 +26,7 @@ export interface Property {
   created_at: string
   updated_at: string
   published_at: string | null
-  dwellings?: Dwelling[]
+  structures?: Structure[]
   areas?: Area[]
 }
 
@@ -37,7 +37,7 @@ export interface PropertyListResponse {
   limit: number
 }
 
-export interface Dwelling {
+export interface Structure {
   id: string
   property_id: string
   name: string
@@ -54,12 +54,13 @@ export interface Dwelling {
 
 export interface Room {
   id: string
-  dwelling_id: string
+  structure_id: string
   name: string
   type: string
   description: string
   size_sqm: number
-  floor: number
+  floor_start: number  // Starting floor (0 = ground, -1 = basement)
+  floor_end: number    // Ending floor (same as start for single floor, different for spanning rooms like stairwells)
   sort_order: number
   created_at: string
   updated_at: string
@@ -79,7 +80,7 @@ export interface Area {
 
 export interface Media {
   id: string
-  entity_type: 'property' | 'dwelling' | 'room' | 'area'
+  entity_type: 'property' | 'structure' | 'room' | 'area'
   entity_id: string
   type: 'image' | 'video' | 'video360' | 'audio' | 'document' | 'model3d'
   url: string
@@ -103,6 +104,7 @@ export interface Quote {
   id: string
   property_id: string
   text: string
+  media_id?: string  // Optional link to specific image
   sort_order: number
   created_at: string
   updated_at: string
@@ -359,33 +361,33 @@ export const api = {
       requireAuth: true,
     }),
 
-  // Dwellings
-  getPropertyDwellings: (propertyId: string) =>
-    fetchAPI<{ data: Dwelling[] }>(`/properties/${propertyId}/dwellings`),
+  // Structures
+  getPropertyStructures: (propertyId: string) =>
+    fetchAPI<{ data: Structure[] }>(`/properties/${propertyId}/structures`),
 
-  createDwelling: (data: Partial<Dwelling>) =>
-    fetchAPI<Dwelling>('/dwellings', {
+  createStructure: (data: Partial<Structure>) =>
+    fetchAPI<Structure>('/structures', {
       method: 'POST',
       body: JSON.stringify(data),
       requireAuth: true,
     }),
 
-  updateDwelling: (id: string, data: Partial<Dwelling>) =>
-    fetchAPI<Dwelling>(`/dwellings/${id}`, {
+  updateStructure: (id: string, data: Partial<Structure>) =>
+    fetchAPI<Structure>(`/structures/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
       requireAuth: true,
     }),
 
-  deleteDwelling: (id: string) =>
-    fetchAPI<void>(`/dwellings/${id}`, {
+  deleteStructure: (id: string) =>
+    fetchAPI<void>(`/structures/${id}`, {
       method: 'DELETE',
       requireAuth: true,
     }),
 
   // Rooms
-  getDwellingRooms: (dwellingId: string) =>
-    fetchAPI<{ data: Room[] }>(`/dwellings/${dwellingId}/rooms`),
+  getStructureRooms: (structureId: string) =>
+    fetchAPI<{ data: Room[] }>(`/structures/${structureId}/rooms`),
 
   createRoom: (data: Partial<Room>) =>
     fetchAPI<Room>('/rooms', {
@@ -471,14 +473,14 @@ export const api = {
   getPropertyQuotes: (propertySlug: string) =>
     fetchAPI<{ data: Quote[] }>(`/properties/${propertySlug}/quotes`),
 
-  createQuote: (data: { property_id: string; text: string; sort_order?: number }) =>
+  createQuote: (data: { property_id: string; text: string; media_id?: string; sort_order?: number }) =>
     fetchAPI<Quote>('/quotes', {
       method: 'POST',
       body: JSON.stringify(data),
       requireAuth: true,
     }),
 
-  updateQuote: (id: string, data: { text?: string; sort_order?: number }) =>
+  updateQuote: (id: string, data: { text?: string; media_id?: string | null; sort_order?: number }) =>
     fetchAPI<Quote>(`/quotes/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

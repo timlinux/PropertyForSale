@@ -33,10 +33,10 @@ func (r *roomRepository) GetByID(ctx context.Context, id uuid.UUID) (*property.R
 	return &room, nil
 }
 
-func (r *roomRepository) ListByDwellingID(ctx context.Context, dwellingID uuid.UUID) ([]property.Room, error) {
+func (r *roomRepository) ListByStructureID(ctx context.Context, structureID uuid.UUID) ([]property.Room, error) {
 	var rooms []property.Room
 	err := r.db.WithContext(ctx).
-		Where("dwelling_id = ?", dwellingID).
+		Where("structure_id = ?", structureID).
 		Order("sort_order ASC, created_at ASC").
 		Find(&rooms).Error
 	return rooms, err

@@ -14,8 +14,8 @@ system.
   and architectural model viewing
 - **Interactive Maps** - MapLibre-powered property exploration with clickable
   features and geospatial data
-- **Hierarchical Content Management** - Properties, dwellings, rooms, and areas
-  with versioned content
+- **Hierarchical Content Management** - Properties, structures (buildings, barns,
+  sheds), rooms, and areas with versioned content
 - **Comprehensive Analytics** - Visitor tracking, geo-location, dwell times,
   A/B testing, and performance reports
 - **Social Authentication** - Login via Google, Apple, Microsoft, GitHub, and

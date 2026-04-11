@@ -44,7 +44,7 @@ import {
   FiX,
   FiStar,
 } from 'react-icons/fi'
-import { api, type Dwelling, type Area, type Media } from '../api'
+import { api, type Structure, type Area, type Media } from '../api'
 import PropertyMap from '../components/map/PropertyMap'
 import { AmbientAudioPlayer } from '../components/media'
 import { usePageTracking } from '../hooks/usePageTracking'
@@ -54,7 +54,7 @@ import QuoteOverlay from '../components/property/QuoteOverlay'
 export default function PropertyPage() {
   const { slug } = useParams<{ slug: string }>()
   const [selectedEntity, setSelectedEntity] = useState<{
-    type: 'property' | 'dwelling' | 'area'
+    type: 'property' | 'structure' | 'area'
     id: string
     name: string
   } | null>(null)
@@ -73,9 +73,9 @@ export default function PropertyPage() {
     enabled: !!slug,
   })
 
-  const { data: dwellingsData } = useQuery({
-    queryKey: ['property-dwellings', property?.slug],
-    queryFn: () => api.getPropertyDwellings(property!.slug),
+  const { data: structuresData } = useQuery({
+    queryKey: ['property-structures', property?.slug],
+    queryFn: () => api.getPropertyStructures(property!.slug),
     enabled: !!property?.slug,
   })
 
@@ -97,7 +97,7 @@ export default function PropertyPage() {
     enabled: !!property?.slug,
   })
 
-  const dwellings = dwellingsData?.data || []
+  const structures =structuresData?.data || []
   const areas = areasData?.data || []
   const allMedia = mediaData?.data || []
   const quotes = quotesData?.data || []
@@ -211,25 +211,25 @@ export default function PropertyPage() {
     }, 4000)
   }, [currentBackgroundImage])
 
-  // Create map markers from dwellings and areas
+  // Create map markers from structures and areas
   const mapMarkers = useMemo(() => {
     const markers: Array<{
       id: string
       lat: number
       lng: number
       label: string
-      type: 'dwelling' | 'area' | 'property'
+      type: 'structure' | 'area' | 'property'
       onClick?: () => void
     }> = []
 
-    dwellings.forEach((d) => {
+    structures.forEach((d) => {
       markers.push({
         id: d.id,
         lat: (property?.latitude || 0) + (Math.random() - 0.5) * 0.001,
         lng: (property?.longitude || 0) + (Math.random() - 0.5) * 0.001,
         label: d.name,
-        type: 'dwelling',
-        onClick: () => setSelectedEntity({ type: 'dwelling', id: d.id, name: d.name }),
+        type: 'structure',
+        onClick: () => setSelectedEntity({ type: 'structure', id: d.id, name: d.name }),
       })
     })
 
@@ -245,7 +245,7 @@ export default function PropertyPage() {
     })
 
     return markers
-  }, [dwellings, areas, property])
+  }, [structures, areas, property])
 
   if (isLoading) {
     return (
@@ -539,14 +539,14 @@ export default function PropertyPage() {
                   </CardBody>
                 </Card>
 
-                {/* Tabs for Dwellings, Areas, Location */}
+                {/* Tabs for Structures, Areas, Location */}
                 <Card bg={cardBg} backdropFilter="blur(10px)" borderWidth="1px" borderColor={cardBorder} shadow="xl" overflow="hidden">
                   <Tabs colorScheme="brand" isLazy>
                     <TabList px={4} pt={4}>
                       <Tab>
                         <HStack>
                           <Icon as={FiHome} />
-                          <Text>Dwellings ({dwellings.length})</Text>
+                          <Text>Structures ({structures.length})</Text>
                         </HStack>
                       </Tab>
                       <Tab>
@@ -564,21 +564,21 @@ export default function PropertyPage() {
                     </TabList>
 
                     <TabPanels>
-                      {/* Dwellings Tab */}
+                      {/* Structures Tab */}
                       <TabPanel>
-                        {dwellings.length === 0 ? (
-                          <Text color="gray.500">No dwellings listed yet.</Text>
+                        {structures.length === 0 ? (
+                          <Text color="gray.500">No structures listed yet.</Text>
                         ) : (
                           <VStack spacing={4} align="stretch">
-                            {dwellings.map((dwelling) => (
-                              <DwellingCard
-                                key={dwelling.id}
-                                dwelling={dwelling}
-                                isSelected={selectedEntity?.id === dwelling.id}
+                            {structures.map((structure) => (
+                              <StructureCard
+                                key={structure.id}
+                                structure={structure}
+                                isSelected={selectedEntity?.id === structure.id}
                                 onClick={() => setSelectedEntity(
-                                  selectedEntity?.id === dwelling.id ? null : { type: 'dwelling', id: dwelling.id, name: dwelling.name }
+                                  selectedEntity?.id === structure.id ? null : { type: 'structure', id: structure.id, name: structure.name }
                                 )}
-                                media={getEntityMedia('dwelling', dwelling.id)}
+                                media={getEntityMedia('structure', structure.id)}
                                 onImageClick={handleImageClick}
                               />
                             ))}
@@ -706,10 +706,10 @@ export default function PropertyPage() {
                       markers={mapMarkers}
                       height="400px"
                       onMarkerClick={(markerId) => {
-                        const dwelling = dwellings.find((d) => d.id === markerId)
+                        const structure = structures.find((d) => d.id === markerId)
                         const area = areas.find((a) => a.id === markerId)
-                        if (dwelling) {
-                          setSelectedEntity({ type: 'dwelling', id: dwelling.id, name: dwelling.name })
+                        if (structure) {
+                          setSelectedEntity({ type: 'structure', id: structure.id, name: structure.name })
                         } else if (area) {
                           setSelectedEntity({ type: 'area', id: area.id, name: area.name })
                         }
@@ -729,7 +729,7 @@ export default function PropertyPage() {
                       </HStack>
                       <HStack>
                         <Box w={4} h={4} borderRadius="full" bg="#2d3748" />
-                        <Text fontSize="sm">Dwelling</Text>
+                        <Text fontSize="sm">Structure</Text>
                       </HStack>
                       <HStack>
                         <Box w={4} h={4} borderRadius="full" bg="#38a169" />
@@ -773,15 +773,15 @@ export default function PropertyPage() {
   )
 }
 
-interface DwellingCardProps {
-  dwelling: Dwelling
+interface StructureCardProps {
+  structure: Structure
   isSelected: boolean
   onClick: () => void
   media: Media[]
   onImageClick?: (url: string, event: React.MouseEvent) => void
 }
 
-function DwellingCard({ dwelling, isSelected, onClick, media, onImageClick }: DwellingCardProps) {
+function StructureCard({ structure, isSelected, onClick, media, onImageClick }: StructureCardProps) {
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const selectedBorder = useColorModeValue('luxury.gold', 'yellow.400')
   const images = media.filter((m) => m.type === 'image')
@@ -800,7 +800,7 @@ function DwellingCard({ dwelling, isSelected, onClick, media, onImageClick }: Dw
       onClick={onClick}
     >
       <HStack justify="space-between" mb={2}>
-        <Heading size="sm">{dwelling.name}</Heading>
+        <Heading size="sm">{structure.name}</Heading>
         <HStack>
           {starredCount > 0 && (
             <Badge colorScheme="yellow">
@@ -813,34 +813,34 @@ function DwellingCard({ dwelling, isSelected, onClick, media, onImageClick }: Dw
           {images.length > 0 && (
             <Badge colorScheme="green">{images.length} photos</Badge>
           )}
-          <Badge colorScheme="blue">{dwelling.type}</Badge>
+          <Badge colorScheme="blue">{structure.type}</Badge>
         </HStack>
       </HStack>
 
       <HStack spacing={4} fontSize="sm" color="gray.600">
-        {dwelling.floor_count && (
+        {structure.floor_count && (
           <HStack>
             <Icon as={FiHome} />
-            <Text>{dwelling.floor_count} floors</Text>
+            <Text>{structure.floor_count} floors</Text>
           </HStack>
         )}
-        {dwelling.year_built && (
+        {structure.year_built && (
           <HStack>
             <Icon as={FiCalendar} />
-            <Text>Built {dwelling.year_built}</Text>
+            <Text>Built {structure.year_built}</Text>
           </HStack>
         )}
-        {dwelling.size_sqm && (
+        {structure.size_sqm && (
           <HStack>
             <Icon as={FiSquare} />
-            <Text>{dwelling.size_sqm} m²</Text>
+            <Text>{structure.size_sqm} m²</Text>
           </HStack>
         )}
       </HStack>
 
-      {dwelling.description && (
+      {structure.description && (
         <Text mt={2} fontSize="sm" color="gray.500" noOfLines={isSelected ? undefined : 2}>
-          {dwelling.description}
+          {structure.description}
         </Text>
       )}
 
@@ -854,7 +854,7 @@ function DwellingCard({ dwelling, isSelected, onClick, media, onImageClick }: Dw
                 <Box position="relative" w="100%" h="100%">
                   <Image
                     src={img.url}
-                    alt={img.file_name || 'Dwelling photo'}
+                    alt={img.file_name || 'Structure photo'}
                     objectFit="cover"
                     borderRadius="md"
                     cursor="pointer"

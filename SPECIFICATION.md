@@ -81,7 +81,7 @@ and sales conversion.
 | US-006 | As a visitor, I want to view floor plans in 2D and 3D | Floor plan viewer supports both modes with room labels |
 | US-007 | As a visitor, I want ambient audio when viewing property areas | Audio autoplays (with user permission) when entering content sections |
 | US-008 | As a visitor, I want an immersive full-screen property explorer | Full-screen media viewer with auto-hiding UI, swipe/keyboard navigation, ripple transitions between images, quick-jump search panel (/ key), filmstrip thumbnail view (f key), info overlay (i key), and touch gesture support |
-| US-009 | As a visitor, I want to navigate between property components in explorer | Tree-style navigation through property → dwellings → rooms and property → areas with keyboard shortcuts (arrow keys, Shift+Up to go up hierarchy) |
+| US-009 | As a visitor, I want to navigate between property components in explorer | Tree-style navigation through property → structures → rooms and property → areas with keyboard shortcuts (arrow keys, Shift+Up to go up hierarchy) |
 
 ### 3.2 Authentication
 
@@ -96,8 +96,8 @@ and sales conversion.
 | ID | Story | Acceptance Criteria |
 |----|-------|---------------------|
 | US-020 | As an agent, I want to create new property listings | Guided wizard for property creation with validation |
-| US-021 | As an agent, I want to add dwellings to a property | Hierarchical structure: Property → Dwellings |
-| US-022 | As an agent, I want to add rooms to dwellings | Hierarchical structure: Dwelling → Rooms |
+| US-021 | As an agent, I want to add structures to a property | Hierarchical structure: Property → Structures |
+| US-022 | As an agent, I want to add rooms to structures | Hierarchical structure: Structure → Rooms |
 | US-023 | As an agent, I want to add areas (gardens, fields) to properties | Areas with polygon geometry on map |
 | US-024 | As an agent, I want to upload media to any entity | Support for images, videos, 360 videos, audio, documents, 3D models |
 | US-025 | As an agent, I want to set media autoplay behavior | Configure which media autoplays when section is viewed |
@@ -111,6 +111,7 @@ and sales conversion.
 | US-031b | As a visitor, I want to preview audio on hover in the media gallery | Hovering over audio items plays a preview with visual feedback (pulse animation) |
 | US-032 | As an agent, I want to create promotional quotes for my property | Add/edit/delete taglines like "Jewel of the Alentejo" via Quotes tab in property editor |
 | US-033 | As a visitor, I want to see promotional quotes overlaid on property images | Large italic text quotes cycle every 15 seconds with fade transitions over the background images |
+| US-034 | As an agent, I want to associate quotes with specific images | Each quote can optionally link to a media item; when that quote displays, its linked image becomes the background |
 
 ### 3.4 Content Management
 
@@ -174,12 +175,12 @@ and sales conversion.
           │                        │                        │
           ▼                        ▼                        ▼
 ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
-│      Dwelling       │  │        Area         │  │       Media         │
+│      Structure      │  │        Area         │  │       Media         │
 ├─────────────────────┤  ├─────────────────────┤  ├─────────────────────┤
 │ id                  │  │ id                  │  │ id                  │
 │ property_id (FK)    │  │ property_id (FK)    │  │ entity_type         │
 │ name                │  │ name                │  │ entity_id           │
-│ type (house|apt|...)│  │ type (garden|field) │  │ type (image|video..)│
+│ type (house|barn..) │  │ type (garden|field) │  │ type (image|video..)│
 │ description         │  │ description         │  │ url                 │
 │ floor_count         │  │ geometry (POLYGON)  │  │ thumbnail_url       │
 │ year_built          │  │ size_sqm            │  │ metadata (JSONB)    │
@@ -194,12 +195,13 @@ and sales conversion.
 │        Room         │
 ├─────────────────────┤
 │ id                  │
-│ dwelling_id (FK)    │
+│ structure_id (FK)   │
 │ name                │
 │ type (bedroom|..)   │
 │ description         │
 │ size_sqm            │
-│ floor               │
+│ floor_start         │
+│ floor_end           │
 │ geometry (POLYGON)  │
 │ sort_order          │
 │ created_at          │
@@ -207,7 +209,22 @@ and sales conversion.
 └─────────────────────┘
 ```
 
-### 4.2 Content Versioning
+### 4.2 Property Quotes
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            PropertyQuote                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ id, property_id (FK), text, media_id (FK → Media, optional), sort_order     │
+│ created_at, updated_at                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+- Quotes are promotional taglines displayed over property images
+- Optional `media_id` links a quote to a specific image; when the quote displays, that image becomes the background
+- Sorted by sort_order then created_at for display order
+
+### 4.4 Content Versioning
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -218,7 +235,7 @@ and sales conversion.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.3 Analytics
+### 4.5 Analytics
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -265,19 +282,19 @@ All endpoints prefixed with `/api/v1/`
 | POST | `/api/v1/properties` | Create property |
 | PUT | `/api/v1/properties/{id}` | Update property |
 | DELETE | `/api/v1/properties/{id}` | Delete property |
-| GET | `/api/v1/properties/{id}/dwellings` | List dwellings |
+| GET | `/api/v1/properties/{id}/structures` | List structures |
 | GET | `/api/v1/properties/{id}/areas` | List areas |
 | GET | `/api/v1/properties/{id}/media` | List media |
 
-### 5.4 Dwelling Endpoints
+### 5.4 Structure Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/dwellings/{id}` | Get dwelling |
-| POST | `/api/v1/dwellings` | Create dwelling |
-| PUT | `/api/v1/dwellings/{id}` | Update dwelling |
-| DELETE | `/api/v1/dwellings/{id}` | Delete dwelling |
-| GET | `/api/v1/dwellings/{id}/rooms` | List rooms |
+| GET | `/api/v1/structures/{id}` | Get structure |
+| POST | `/api/v1/structures` | Create structure |
+| PUT | `/api/v1/structures/{id}` | Update structure |
+| DELETE | `/api/v1/structures/{id}` | Delete structure |
+| GET | `/api/v1/structures/{id}/rooms` | List rooms |
 
 ### 5.5 Media Endpoints
 
@@ -384,3 +401,4 @@ All endpoints prefixed with `/api/v1/`
 |---------|------|--------|---------|
 | 0.1.0 | 2026-04-04 | System | Initial specification |
 | 0.2.0 | 2026-04-07 | System | Added immersive PropertyExplorer with auto-hiding UI, touch gestures, ripple transitions, quick-jump search, filmstrip view; Added media starring feature with slideshow functionality; Made explorer the primary entry point from property cards |
+| 0.3.0 | 2026-04-11 | System | Added quote-media association allowing quotes to link to specific images; when a quote with an associated image displays, that image becomes the background |

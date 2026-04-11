@@ -16,30 +16,30 @@ import (
 
 // PropertyHandler handles property HTTP requests
 type PropertyHandler struct {
-	propertySvc *service.PropertyService
-	dwellingSvc *service.DwellingService
-	roomSvc     *service.RoomService
-	areaSvc     *service.AreaService
-	mediaSvc    *service.MediaService
-	quoteSvc    *service.QuoteService
+	propertySvc  *service.PropertyService
+	structureSvc *service.StructureService
+	roomSvc      *service.RoomService
+	areaSvc      *service.AreaService
+	mediaSvc     *service.MediaService
+	quoteSvc     *service.QuoteService
 }
 
 // NewPropertyHandler creates a new property handler
 func NewPropertyHandler(
 	propertySvc *service.PropertyService,
-	dwellingSvc *service.DwellingService,
+	structureSvc *service.StructureService,
 	roomSvc *service.RoomService,
 	areaSvc *service.AreaService,
 	mediaSvc *service.MediaService,
 	quoteSvc *service.QuoteService,
 ) *PropertyHandler {
 	return &PropertyHandler{
-		propertySvc: propertySvc,
-		dwellingSvc: dwellingSvc,
-		roomSvc:     roomSvc,
-		areaSvc:     areaSvc,
-		mediaSvc:    mediaSvc,
-		quoteSvc:    quoteSvc,
+		propertySvc:  propertySvc,
+		structureSvc: structureSvc,
+		roomSvc:      roomSvc,
+		areaSvc:      areaSvc,
+		mediaSvc:     mediaSvc,
+		quoteSvc:     quoteSvc,
 	}
 }
 
@@ -206,8 +206,8 @@ func (h *PropertyHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
-// ListDwellings handles GET /api/v1/properties/:slug/dwellings
-func (h *PropertyHandler) ListDwellings(c *gin.Context) {
+// ListStructures handles GET /api/v1/properties/:slug/structures
+func (h *PropertyHandler) ListStructures(c *gin.Context) {
 	slug := c.Param("slug")
 
 	// Look up property by slug to get the ID
@@ -217,13 +217,13 @@ func (h *PropertyHandler) ListDwellings(c *gin.Context) {
 		return
 	}
 
-	dwellings, err := h.dwellingSvc.ListByPropertyID(c.Request.Context(), property.ID)
+	structures, err := h.structureSvc.ListByPropertyID(c.Request.Context(), property.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": dwellings})
+	c.JSON(http.StatusOK, gin.H{"data": structures})
 }
 
 // ListAreas handles GET /api/v1/properties/:slug/areas
@@ -247,7 +247,7 @@ func (h *PropertyHandler) ListAreas(c *gin.Context) {
 }
 
 // ListMedia handles GET /api/v1/properties/:slug/media
-// Returns all media for the property and its sub-entities (dwellings, rooms, areas)
+// Returns all media for the property and its sub-entities (structures, rooms, areas)
 func (h *PropertyHandler) ListMedia(c *gin.Context) {
 	slug := c.Param("slug")
 	ctx := c.Request.Context()
@@ -268,17 +268,17 @@ func (h *PropertyHandler) ListMedia(c *gin.Context) {
 		allMedia = append(allMedia, propertyMedia...)
 	}
 
-	// Get dwellings and their media
-	dwellings, err := h.dwellingSvc.ListByPropertyID(ctx, property.ID)
+	// Get structures and their media
+	structures, err := h.structureSvc.ListByPropertyID(ctx, property.ID)
 	if err == nil {
-		for _, dwelling := range dwellings {
-			dwellingMedia, err := h.mediaSvc.ListByEntity(ctx, media.EntityTypeDwelling, dwelling.ID)
+		for _, structure := range structures {
+			structureMedia, err := h.mediaSvc.ListByEntity(ctx, media.EntityTypeStructure, structure.ID)
 			if err == nil {
-				allMedia = append(allMedia, dwellingMedia...)
+				allMedia = append(allMedia, structureMedia...)
 			}
 
-			// Get rooms for this dwelling and their media
-			rooms, err := h.roomSvc.ListByDwellingID(ctx, dwelling.ID)
+			// Get rooms for this structure and their media
+			rooms, err := h.roomSvc.ListByStructureID(ctx, structure.ID)
 			if err == nil {
 				for _, room := range rooms {
 					roomMedia, err := h.mediaSvc.ListByEntity(ctx, media.EntityTypeRoom, room.ID)
