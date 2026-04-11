@@ -48,11 +48,12 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { FiPlus, FiTrash2, FiHome, FiLayers, FiMapPin, FiStar, FiEdit2 } from 'react-icons/fi'
+import { FiPlus, FiTrash2, FiHome, FiLayers, FiMapPin, FiStar, FiEdit2, FiImage, FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, Property, Structure, Room, Area, Quote, Media } from '../../api'
 import { useAuthHeaders } from '../../context/authStore'
-import { MediaPreviewCard } from '../media'
+import { MediaPreviewCard, MediaAssociationPanel } from '../media'
+import Map3DTab from './Map3DTab'
 
 export default function PropertyEdit() {
   const { slug } = useParams<{ slug: string }>()
@@ -102,6 +103,7 @@ export default function PropertyEdit() {
           <Tab>Outdoor Areas</Tab>
           <Tab>Media</Tab>
           <Tab>Quotes</Tab>
+          <Tab>3D Map</Tab>
         </TabList>
 
         <TabPanels>
@@ -119,6 +121,9 @@ export default function PropertyEdit() {
           </TabPanel>
           <TabPanel px={0}>
             <QuotesTab property={property} />
+          </TabPanel>
+          <TabPanel px={0}>
+            <Map3DTab property={property} />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -359,6 +364,7 @@ function StructuresTab({ property }: { property: Property }) {
             <StructureItem
               key={structure.id}
               structure={structure}
+              property={property}
               onDelete={() => deleteStructureMutation.mutate(structure.id)}
             />
           ))}
@@ -375,11 +381,13 @@ function StructuresTab({ property }: { property: Property }) {
   )
 }
 
-function StructureItem({ structure, onDelete }: { structure: Structure; onDelete: () => void }) {
+function StructureItem({ structure, property, onDelete }: { structure: Structure; property: Property; onDelete: () => void }) {
   const authHeaders = useAuthHeaders()
   const queryClient = useQueryClient()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const [showStructureMedia, setShowStructureMedia] = useState(false)
+  const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null)
 
   const { data: roomsData } = useQuery({
     queryKey: ['rooms', structure.id],
@@ -476,24 +484,73 @@ function StructureItem({ structure, onDelete }: { structure: Structure; onDelete
             {rooms.length > 0 && (
               <VStack align="stretch" spacing={1}>
                 {rooms.map((room) => (
-                  <HStack key={room.id} p={2} bg="gray.50" borderRadius="md" justify="space-between">
-                    <HStack>
-                      <FiLayers />
-                      <Text>{room.name}</Text>
-                      {room.type && <Text color="gray.500">({room.type})</Text>}
-                      {room.size_sqm && <Text color="gray.500">{room.size_sqm} m²</Text>}
+                  <Box key={room.id}>
+                    <HStack p={2} bg="gray.50" borderRadius="md" justify="space-between">
+                      <HStack>
+                        <FiLayers />
+                        <Text>{room.name}</Text>
+                        {room.type && <Text color="gray.500">({room.type})</Text>}
+                        {room.size_sqm && <Text color="gray.500">{room.size_sqm} m²</Text>}
+                      </HStack>
+                      <HStack spacing={1}>
+                        <IconButton
+                          aria-label="Toggle media"
+                          icon={expandedRoomId === room.id ? <FiChevronUp /> : <FiImage />}
+                          size="xs"
+                          variant="ghost"
+                          colorScheme={expandedRoomId === room.id ? 'blue' : 'gray'}
+                          onClick={() => setExpandedRoomId(expandedRoomId === room.id ? null : room.id)}
+                        />
+                        <IconButton
+                          aria-label="Delete"
+                          icon={<FiTrash2 />}
+                          size="xs"
+                          variant="ghost"
+                          colorScheme="red"
+                          onClick={() => deleteRoomMutation.mutate(room.id)}
+                        />
+                      </HStack>
                     </HStack>
-                    <IconButton
-                      aria-label="Delete"
-                      icon={<FiTrash2 />}
-                      size="xs"
-                      variant="ghost"
-                      colorScheme="red"
-                      onClick={() => deleteRoomMutation.mutate(room.id)}
-                    />
-                  </HStack>
+                    {expandedRoomId === room.id && (
+                      <Box mt={2} ml={4} p={3} bg="gray.25" borderRadius="md" borderWidth="1px" borderColor="gray.100">
+                        <MediaAssociationPanel
+                          propertySlug={property.slug}
+                          propertyId={property.id}
+                          entityType="room"
+                          entityId={room.id}
+                          entityName={room.name}
+                        />
+                      </Box>
+                    )}
+                  </Box>
                 ))}
               </VStack>
+            )}
+          </Box>
+
+          {/* Structure Media Section */}
+          <Box mt={4} pt={4} borderTopWidth="1px">
+            <HStack justify="space-between" mb={2}>
+              <HStack>
+                <FiImage />
+                <Text fontWeight="600">Structure Media</Text>
+              </HStack>
+              <IconButton
+                aria-label="Toggle media panel"
+                icon={showStructureMedia ? <FiChevronUp /> : <FiChevronDown />}
+                size="xs"
+                variant="ghost"
+                onClick={() => setShowStructureMedia(!showStructureMedia)}
+              />
+            </HStack>
+            {showStructureMedia && (
+              <MediaAssociationPanel
+                propertySlug={property.slug}
+                propertyId={property.id}
+                entityType="structure"
+                entityId={structure.id}
+                entityName={structure.name}
+              />
             )}
           </Box>
         </VStack>
@@ -515,6 +572,7 @@ function AreasTab({ property }: { property: Property }) {
   const queryClient = useQueryClient()
   const authHeaders = useAuthHeaders()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const [expandedAreaId, setExpandedAreaId] = useState<string | null>(null)
 
   const { data: areasData } = useQuery({
     queryKey: ['areas', property.slug],
@@ -589,14 +647,24 @@ function AreasTab({ property }: { property: Property }) {
                     <FiMapPin />
                     <Text fontWeight="600">{area.name}</Text>
                   </HStack>
-                  <IconButton
-                    aria-label="Delete"
-                    icon={<FiTrash2 />}
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="red"
-                    onClick={() => deleteAreaMutation.mutate(area.id)}
-                  />
+                  <HStack spacing={1}>
+                    <IconButton
+                      aria-label="Toggle media"
+                      icon={expandedAreaId === area.id ? <FiChevronUp /> : <FiImage />}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme={expandedAreaId === area.id ? 'blue' : 'gray'}
+                      onClick={() => setExpandedAreaId(expandedAreaId === area.id ? null : area.id)}
+                    />
+                    <IconButton
+                      aria-label="Delete"
+                      icon={<FiTrash2 />}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="red"
+                      onClick={() => deleteAreaMutation.mutate(area.id)}
+                    />
+                  </HStack>
                 </HStack>
                 <SimpleGrid columns={2} spacing={2} fontSize="sm">
                   <Box>
@@ -610,6 +678,17 @@ function AreasTab({ property }: { property: Property }) {
                 </SimpleGrid>
                 {area.description && (
                   <Text fontSize="sm" mt={2} color="gray.600">{area.description}</Text>
+                )}
+                {expandedAreaId === area.id && (
+                  <Box mt={3} pt={3} borderTopWidth="1px">
+                    <MediaAssociationPanel
+                      propertySlug={property.slug}
+                      propertyId={property.id}
+                      entityType="area"
+                      entityId={area.id}
+                      entityName={area.name}
+                    />
+                  </Box>
                 )}
               </CardBody>
             </Card>
@@ -627,7 +706,7 @@ function AreasTab({ property }: { property: Property }) {
   )
 }
 
-// Media Tab
+// Media Tab - Split View Design (no modals)
 function MediaTab({ property }: { property: Property }) {
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -636,11 +715,25 @@ function MediaTab({ property }: { property: Property }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [selectedEntityType, setSelectedEntityType] = useState<'property' | 'structure' | 'room' | 'area'>('property')
   const [selectedEntityId, setSelectedEntityId] = useState<string>(property.id)
-  const [editingMedia, setEditingMedia] = useState<{
-    id: string
+
+  // Selected media for detail panel (replaces modal)
+  const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null)
+
+  // Editing state for the detail panel
+  const [editForm, setEditForm] = useState<{
     caption: string
     linkedAudioId: string | null
+    entityType: 'property' | 'structure' | 'room' | 'area'
+    entityId: string
+    tag: string
+    creatingNew: boolean
+    newEntityName: string
+    newEntityType: string
+    newEntityStructureId: string
   } | null>(null)
+
+  // Track if form has unsaved changes
+  const [hasChanges, setHasChanges] = useState(false)
 
   // Fetch structures
   const { data: structuresData } = useQuery({
@@ -705,12 +798,12 @@ function MediaTab({ property }: { property: Property }) {
   })
 
   const updateMediaMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { caption?: string; linked_audio_id?: string | null } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { caption?: string; linked_audio_id?: string | null; entity_type?: string; entity_id?: string; tag?: string } }) =>
       api.updateMedia(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media', property.slug] })
       toast({ title: 'Media updated', status: 'success', duration: 2000 })
-      setEditingMedia(null)
+      setHasChanges(false)
     },
     onError: () => {
       toast({ title: 'Failed to update media', status: 'error', duration: 3000 })
@@ -751,6 +844,17 @@ function MediaTab({ property }: { property: Property }) {
 
     for (const file of Array.from(files)) {
       try {
+        // Skip ZIP files - they should be uploaded via the 3D Map tab
+        if (file.name.toLowerCase().endsWith('.zip')) {
+          toast({
+            title: 'ZIP files should be uploaded in the 3D Map tab',
+            description: 'Use the "3D Map" tab to upload Qgis2threejs exports.',
+            status: 'info',
+            duration: 5000,
+          })
+          continue
+        }
+
         const formData = new FormData()
         formData.append('file', file)
         formData.append('entity_type', selectedEntityType)
@@ -780,11 +884,13 @@ function MediaTab({ property }: { property: Property }) {
     setIsUploading(false)
     setUploadProgress(0)
     queryClient.invalidateQueries({ queryKey: ['media', property.slug] })
-    toast({
-      title: `Uploaded ${uploaded} file(s)`,
-      status: 'success',
-      duration: 3000,
-    })
+    if (uploaded > 0) {
+      toast({
+        title: `Uploaded ${uploaded} file(s)`,
+        status: 'success',
+        duration: 3000,
+      })
+    }
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -819,41 +925,153 @@ function MediaTab({ property }: { property: Property }) {
     return entityType
   }
 
+  // Handler to select a media item and populate the edit form
+  const handleSelectMedia = (item: Media) => {
+    setSelectedMediaId(item.id)
+    setEditForm({
+      caption: item.caption || '',
+      linkedAudioId: item.linked_audio_id || null,
+      entityType: item.entity_type as 'property' | 'structure' | 'room' | 'area',
+      entityId: item.entity_id,
+      tag: item.tag || '',
+      creatingNew: false,
+      newEntityName: '',
+      newEntityType: '',
+      newEntityStructureId: structures.length > 0 ? structures[0].id : '',
+    })
+    setHasChanges(false)
+  }
+
+  // Handler to close detail panel
+  const handleCloseDetail = () => {
+    setSelectedMediaId(null)
+    setEditForm(null)
+    setHasChanges(false)
+  }
+
+  // Handler to save media changes
+  const handleSaveMedia = async () => {
+    if (!selectedMediaId || !editForm) return
+
+    let entityId = editForm.entityId
+    let newEntityType = editForm.entityType
+    let createdNewEntity = false
+
+    // If creating a new entity, create it first
+    if (editForm.creatingNew && editForm.newEntityName.trim()) {
+      try {
+        if (editForm.entityType === 'structure') {
+          const result = await api.createStructure({
+            property_id: property.id,
+            name: editForm.newEntityName,
+            type: editForm.newEntityType,
+          })
+          console.log('Created structure:', result)
+          entityId = result.id
+          createdNewEntity = true
+          await queryClient.invalidateQueries({ queryKey: ['structures', property.slug] })
+        } else if (editForm.entityType === 'room') {
+          if (!editForm.newEntityStructureId) {
+            toast({ title: 'Please select a structure for the room', status: 'warning', duration: 3000 })
+            return
+          }
+          const result = await api.createRoom({
+            structure_id: editForm.newEntityStructureId,
+            name: editForm.newEntityName,
+            type: editForm.newEntityType,
+          })
+          console.log('Created room:', result)
+          entityId = result.id
+          createdNewEntity = true
+          await queryClient.invalidateQueries({ queryKey: ['structures', property.slug] })
+        } else if (editForm.entityType === 'area') {
+          const result = await api.createArea({
+            property_id: property.id,
+            name: editForm.newEntityName,
+            type: editForm.newEntityType,
+          })
+          console.log('Created area:', result)
+          entityId = result.id
+          createdNewEntity = true
+          await queryClient.invalidateQueries({ queryKey: ['areas', property.slug] })
+        }
+        toast({
+          title: `${editForm.entityType.charAt(0).toUpperCase() + editForm.entityType.slice(1)} "${editForm.newEntityName}" created`,
+          status: 'success',
+          duration: 2000
+        })
+      } catch (error) {
+        console.error('Failed to create entity:', error)
+        toast({ title: `Failed to create ${editForm.entityType}`, status: 'error', duration: 3000 })
+        return
+      }
+    }
+
+    // Now update the media
+    console.log('Updating media:', selectedMediaId, 'to entity:', newEntityType, entityId)
+    updateMediaMutation.mutate({
+      id: selectedMediaId,
+      data: {
+        caption: editForm.caption,
+        linked_audio_id: editForm.linkedAudioId,
+        entity_type: editForm.entityType,
+        entity_id: entityId,
+        tag: editForm.tag,
+      },
+    }, {
+      onSuccess: () => {
+        // If we created a new entity, switch the view to show that entity's media
+        if (createdNewEntity && entityId) {
+          console.log('Switching view to:', newEntityType, entityId)
+          setSelectedEntityType(newEntityType)
+          setSelectedEntityId(entityId)
+        }
+        // Close the detail panel
+        handleCloseDetail()
+      }
+    })
+  }
+
+  // Get selected media item
+  const selectedMedia = selectedMediaId ? media.find(m => m.id === selectedMediaId) : null
+
   return (
-    <VStack spacing={6} align="stretch">
-      {/* Entity selector */}
-      <Card>
-        <CardBody>
-          <VStack spacing={4} align="stretch">
-            <Text fontWeight="500">Upload media to:</Text>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-              <FormControl>
-                <FormLabel>Entity Type</FormLabel>
+    <HStack spacing={0} align="flex-start" position="relative">
+      {/* Left Panel - Media Grid (natural scrolling) */}
+      <Box
+        flex="1"
+        pr={selectedMediaId ? '400px' : 0}
+        transition="padding 0.3s ease"
+      >
+        <VStack spacing={4} align="stretch">
+          {/* Entity selector - compact */}
+          <Card size="sm">
+            <CardBody py={3}>
+              <HStack spacing={4} flexWrap="wrap">
+                <Text fontWeight="500" fontSize="sm">Upload to:</Text>
                 <Select
+                  size="sm"
+                  w="auto"
+                  minW="150px"
                   value={selectedEntityType}
                   onChange={(e) => handleEntityTypeChange(e.target.value as typeof selectedEntityType)}
                 >
                   <option value="property">Whole Property</option>
                   <option value="structure" disabled={structures.length === 0}>
-                    Structure {structures.length === 0 && '(none added)'}
+                    Structure {structures.length === 0 && '(none)'}
                   </option>
                   <option value="room" disabled={allRooms.length === 0}>
-                    Room {allRooms.length === 0 && '(none added)'}
+                    Room {allRooms.length === 0 && '(none)'}
                   </option>
                   <option value="area" disabled={areas.length === 0}>
-                    Outside Area {areas.length === 0 && '(none added)'}
+                    Area {areas.length === 0 && '(none)'}
                   </option>
                 </Select>
-              </FormControl>
-
-              {selectedEntityType !== 'property' && (
-                <FormControl>
-                  <FormLabel>
-                    {selectedEntityType === 'structure' && 'Select Structure'}
-                    {selectedEntityType === 'room' && 'Select Room'}
-                    {selectedEntityType === 'area' && 'Select Area'}
-                  </FormLabel>
+                {selectedEntityType !== 'property' && (
                   <Select
+                    size="sm"
+                    w="auto"
+                    minW="150px"
                     value={selectedEntityId}
                     onChange={(e) => setSelectedEntityId(e.target.value)}
                   >
@@ -873,18 +1091,14 @@ function MediaTab({ property }: { property: Property }) {
                       ))
                     }
                   </Select>
-                </FormControl>
-              )}
-            </SimpleGrid>
-          </VStack>
-        </CardBody>
-      </Card>
+                )}
+              </HStack>
+            </CardBody>
+          </Card>
 
-      {/* Upload area */}
-      <Card>
-        <CardBody>
+          {/* Upload area - compact */}
           <Box
-            p={8}
+            p={4}
             border="2px dashed"
             borderColor={isDragOver ? 'blue.400' : 'gray.200'}
             borderRadius="lg"
@@ -897,17 +1111,15 @@ function MediaTab({ property }: { property: Property }) {
             position="relative"
           >
             {isUploading ? (
-              <VStack spacing={4}>
-                <Spinner size="lg" color="blue.500" />
-                <Text>Uploading... {uploadProgress}%</Text>
-              </VStack>
+              <HStack justify="center" spacing={3}>
+                <Spinner size="sm" color="blue.500" />
+                <Text fontSize="sm">Uploading... {uploadProgress}%</Text>
+              </HStack>
             ) : (
-              <VStack spacing={4}>
-                <Text fontSize="4xl">📤</Text>
-                <Text fontWeight="500">Drag & drop files here</Text>
-                <Text fontSize="sm" color="gray.500">
-                  or click to select files
-                </Text>
+              <HStack justify="center" spacing={4}>
+                <Text>📤</Text>
+                <Text fontWeight="500" fontSize="sm">Drag & drop files here</Text>
+                <Text fontSize="xs" color="gray.500">or click to browse</Text>
                 <Input
                   type="file"
                   multiple
@@ -921,199 +1133,436 @@ function MediaTab({ property }: { property: Property }) {
                   w="100%"
                   h="100%"
                 />
-                <Text fontSize="xs" color="gray.400">
-                  Supports: Images, Videos, Audio, 3D Models (.glb, .gltf, .obj)
-                </Text>
-              </VStack>
+              </HStack>
             )}
           </Box>
-        </CardBody>
-      </Card>
 
-      {/* Media grid for selected entity */}
-      <Card>
-        <CardBody>
-          <HStack justify="space-between" mb={4}>
-            <Text fontWeight="500">
-              Media for: {getEntityLabel(selectedEntityType, selectedEntityId)}
+          {/* Media grid header */}
+          <HStack justify="space-between" mb={2}>
+            <Text fontWeight="500" fontSize="sm">
+              {getEntityLabel(selectedEntityType, selectedEntityId)}
             </Text>
-            <Badge colorScheme="blue">{filteredMedia.length} item(s)</Badge>
+            <Badge colorScheme="blue" fontSize="xs">{filteredMedia.length} items</Badge>
           </HStack>
 
+          {/* Media grid */}
           {mediaLoading ? (
             <Center py={8}>
               <Spinner />
             </Center>
           ) : filteredMedia.length === 0 ? (
-            <Text color="gray.500" textAlign="center" py={8}>
+            <Text color="gray.500" textAlign="center" py={8} fontSize="sm">
               No media for this {selectedEntityType}. Upload files above.
             </Text>
           ) : (
-            <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={4}>
+            <SimpleGrid columns={{ base: 2, md: selectedMediaId ? 2 : 3, lg: selectedMediaId ? 3 : 4 }} spacing={3}>
               {filteredMedia.map((item) => (
-                <Card key={item.id} position="relative" overflow="hidden" variant="outline">
-                  <CardBody p={0}>
-                    <Box position="relative">
-                      <MediaPreviewCard media={item} height="150px" />
-                      {/* Star indicator overlay for starred items */}
-                      {item.starred && (
-                        <Box
-                          position="absolute"
-                          top={1}
-                          left={1}
-                          bg="yellow.400"
-                          borderRadius="full"
-                          p={1}
-                          zIndex={1}
-                        >
-                          <FiStar size={14} color="white" fill="white" />
-                        </Box>
-                      )}
-                    </Box>
-                    <Box p={2}>
-                      <Text fontSize="xs" noOfLines={1} title={item.file_name}>
-                        {item.file_name}
-                      </Text>
-                      {/* Show caption preview if exists */}
-                      {item.caption && (
-                        <Text fontSize="xs" color="blue.500" noOfLines={1} title={item.caption}>
-                          {item.caption}
-                        </Text>
-                      )}
-                      {/* Show linked audio indicator */}
-                      {item.linked_audio_id && (
-                        <Badge size="xs" colorScheme="green" fontSize="xx-small">
-                          🔊 Audio linked
-                        </Badge>
-                      )}
-                      <HStack justify="space-between" mt={1}>
-                        <Text fontSize="xs" color="gray.500">
-                          {(item.file_size / 1024 / 1024).toFixed(2)} MB
-                        </Text>
-                        <HStack spacing={1}>
-                          {/* Edit button for images - set caption and link audio */}
-                          {item.type === 'image' && (
-                            <IconButton
-                              aria-label="Edit media"
-                              icon={<FiEdit2 />}
-                              size="xs"
-                              colorScheme="blue"
-                              variant="ghost"
-                              onClick={() => setEditingMedia({
-                                id: item.id,
-                                caption: item.caption || '',
-                                linkedAudioId: item.linked_audio_id || null,
-                              })}
-                            />
-                          )}
-                          {/* Allow starring images, videos, and audio files */}
-                          {(item.type === 'image' || item.type === 'video' || item.type === 'video360' || item.type === 'audio') && (
-                            <IconButton
-                              aria-label={item.starred ? 'Remove star' : `Star ${item.type}`}
-                              icon={<FiStar fill={item.starred ? 'currentColor' : 'none'} />}
-                              size="xs"
-                              colorScheme={item.starred ? 'yellow' : 'gray'}
-                              variant={item.starred ? 'solid' : 'ghost'}
-                              onClick={() => starMutation.mutate(item.id)}
-                              isLoading={starMutation.isPending}
-                            />
-                          )}
-                          <IconButton
-                            aria-label="Delete media"
-                            icon={<FiTrash2 />}
-                            size="xs"
-                            colorScheme="red"
-                            variant="ghost"
-                            onClick={() => deleteMutation.mutate(item.id)}
-                            isLoading={deleteMutation.isPending}
-                          />
-                        </HStack>
-                      </HStack>
-                    </Box>
-                  </CardBody>
-                </Card>
+                <Box
+                  key={item.id}
+                  position="relative"
+                  borderRadius="lg"
+                  overflow="hidden"
+                  borderWidth="2px"
+                  borderColor={selectedMediaId === item.id ? 'blue.500' : 'transparent'}
+                  bg={selectedMediaId === item.id ? 'blue.50' : 'white'}
+                  cursor="pointer"
+                  transition="all 0.2s ease"
+                  _hover={{
+                    borderColor: selectedMediaId === item.id ? 'blue.500' : 'gray.300',
+                    transform: 'scale(1.02)',
+                  }}
+                  onClick={() => handleSelectMedia(item)}
+                  boxShadow={selectedMediaId === item.id ? 'md' : 'sm'}
+                >
+                  <Box position="relative">
+                    <MediaPreviewCard media={item} height="120px" />
+                    {/* Star indicator */}
+                    {item.starred && (
+                      <Box
+                        position="absolute"
+                        top={1}
+                        left={1}
+                        bg="yellow.400"
+                        borderRadius="full"
+                        p={1}
+                      >
+                        <FiStar size={12} color="white" fill="white" />
+                      </Box>
+                    )}
+                    {/* Selection indicator */}
+                    {selectedMediaId === item.id && (
+                      <Box
+                        position="absolute"
+                        top={1}
+                        right={1}
+                        bg="blue.500"
+                        borderRadius="full"
+                        p={1}
+                      >
+                        <FiEdit2 size={12} color="white" />
+                      </Box>
+                    )}
+                  </Box>
+                  <Box p={2}>
+                    <Text fontSize="xs" noOfLines={1} fontWeight={selectedMediaId === item.id ? '500' : '400'}>
+                      {item.file_name}
+                    </Text>
+                    {item.tag && (
+                      <Badge size="xs" colorScheme={item.tag === 'house_plan' ? 'purple' : 'orange'} fontSize="xx-small">
+                        {item.tag === 'house_plan' ? '📐 Plan' : '🗺️ Map'}
+                      </Badge>
+                    )}
+                  </Box>
+                </Box>
               ))}
             </SimpleGrid>
           )}
-        </CardBody>
-      </Card>
 
-      {/* All media summary */}
-      {media.length > 0 && (
-        <Card>
-          <CardBody>
-            <Text fontWeight="500" mb={2}>All Property Media ({media.length} total)</Text>
-            <HStack spacing={4} flexWrap="wrap">
-              <Badge>Property: {media.filter(m => m.entity_type === 'property').length}</Badge>
-              <Badge>Structures: {media.filter(m => m.entity_type === 'structure').length}</Badge>
-              <Badge>Rooms: {media.filter(m => m.entity_type === 'room').length}</Badge>
-              <Badge>Areas: {media.filter(m => m.entity_type === 'area').length}</Badge>
+          {/* All media summary */}
+          {media.length > 0 && (
+            <HStack spacing={2} mt={4} flexWrap="wrap" fontSize="xs" color="gray.500">
+              <Text>Total: {media.length}</Text>
+              <Text>|</Text>
+              <Text>Property: {media.filter(m => m.entity_type === 'property').length}</Text>
+              <Text>Structures: {media.filter(m => m.entity_type === 'structure').length}</Text>
+              <Text>Rooms: {media.filter(m => m.entity_type === 'room').length}</Text>
+              <Text>Areas: {media.filter(m => m.entity_type === 'area').length}</Text>
             </HStack>
-          </CardBody>
-        </Card>
-      )}
+          )}
+        </VStack>
+      </Box>
 
-      {/* Edit Media Modal */}
-      <Modal isOpen={!!editingMedia} onClose={() => setEditingMedia(null)} size="md">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Edit Image</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
+      {/* Right Panel - Detail Editor (fixed position when shown) */}
+      <Box
+        position="fixed"
+        right={0}
+        top="140px"
+        bottom={0}
+        w={selectedMediaId ? '380px' : '0px'}
+        overflow="hidden"
+        transition="width 0.3s ease"
+        borderLeftWidth={selectedMediaId ? '1px' : '0'}
+        borderColor="gray.200"
+        bg="white"
+        zIndex={10}
+        boxShadow={selectedMediaId ? 'lg' : 'none'}
+      >
+        {selectedMedia && editForm && (
+          <Box h="100%" overflowY="auto" pl={4} pr={4} pb={4}>
+            <VStack spacing={4} align="stretch">
+              {/* Header with close button */}
+              <HStack justify="space-between" position="sticky" top={0} bg="white" py={2} zIndex={1}>
+                <Text fontWeight="600" fontSize="lg">Edit Media</Text>
+                <IconButton
+                  aria-label="Close panel"
+                  icon={<Text fontSize="lg">×</Text>}
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCloseDetail}
+                />
+              </HStack>
+
+              {/* Large preview */}
+              <Box borderRadius="lg" overflow="hidden" bg="gray.100">
+                <Image
+                  src={selectedMedia.thumbnail_url || selectedMedia.url}
+                  alt={selectedMedia.file_name}
+                  w="full"
+                  maxH="220px"
+                  objectFit="cover"
+                />
+              </Box>
+
+              {/* File info */}
+              <Box fontSize="xs" color="gray.500">
+                <Text fontWeight="500">{selectedMedia.file_name}</Text>
+                <Text>{(selectedMedia.file_size / 1024 / 1024).toFixed(2)} MB • {selectedMedia.width}×{selectedMedia.height}</Text>
+              </Box>
+
+              {/* Quick actions */}
+              <HStack spacing={2}>
+                <IconButton
+                  aria-label={selectedMedia.starred ? 'Remove star' : 'Star'}
+                  icon={<FiStar fill={selectedMedia.starred ? 'currentColor' : 'none'} />}
+                  size="sm"
+                  colorScheme={selectedMedia.starred ? 'yellow' : 'gray'}
+                  variant={selectedMedia.starred ? 'solid' : 'outline'}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    starMutation.mutate(selectedMedia.id)
+                  }}
+                />
+                <IconButton
+                  aria-label="Delete"
+                  icon={<FiTrash2 />}
+                  size="sm"
+                  colorScheme="red"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    deleteMutation.mutate(selectedMedia.id)
+                    handleCloseDetail()
+                  }}
+                />
+              </HStack>
+
+              {/* Caption */}
               <FormControl>
-                <FormLabel>Caption</FormLabel>
+                <FormLabel fontSize="sm">Caption</FormLabel>
                 <Textarea
-                  value={editingMedia?.caption || ''}
-                  onChange={(e) => setEditingMedia(prev => prev ? { ...prev, caption: e.target.value } : null)}
-                  placeholder="Enter a caption for this image..."
-                  rows={3}
+                  value={editForm.caption}
+                  onChange={(e) => {
+                    setEditForm(prev => prev ? { ...prev, caption: e.target.value } : null)
+                    setHasChanges(true)
+                  }}
+                  placeholder="Enter a caption..."
+                  rows={2}
+                  size="sm"
                 />
               </FormControl>
+
+              {/* Linked Audio */}
               <FormControl>
-                <FormLabel>Linked Audio (for narration)</FormLabel>
+                <FormLabel fontSize="sm">Linked Audio</FormLabel>
                 <Select
-                  value={editingMedia?.linkedAudioId || ''}
-                  onChange={(e) => setEditingMedia(prev => prev ? { ...prev, linkedAudioId: e.target.value || null } : null)}
+                  size="sm"
+                  value={editForm.linkedAudioId || ''}
+                  onChange={(e) => {
+                    setEditForm(prev => prev ? { ...prev, linkedAudioId: e.target.value || null } : null)
+                    setHasChanges(true)
+                  }}
                 >
-                  <option value="">No audio linked</option>
+                  <option value="">No audio</option>
                   {audioFiles.map((audio) => (
-                    <option key={audio.id} value={audio.id}>
-                      {audio.file_name}
-                    </option>
+                    <option key={audio.id} value={audio.id}>{audio.file_name}</option>
                   ))}
                 </Select>
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  Link an audio file to play when this image is displayed
-                </Text>
               </FormControl>
+
+              {/* Special Tag */}
+              <FormControl>
+                <FormLabel fontSize="sm">Special Tag</FormLabel>
+                <Select
+                  size="sm"
+                  value={editForm.tag}
+                  onChange={(e) => {
+                    setEditForm(prev => prev ? { ...prev, tag: e.target.value } : null)
+                    setHasChanges(true)
+                  }}
+                >
+                  <option value="">None</option>
+                  <option value="house_plan">House Plan</option>
+                  <option value="property_map">Property Map</option>
+                </Select>
+              </FormControl>
+
+              {/* Entity Assignment */}
+              <FormControl>
+                <FormLabel fontSize="sm">Assign To</FormLabel>
+                <VStack spacing={2} align="stretch">
+                  <Select
+                    size="sm"
+                    value={editForm.entityType}
+                    onChange={(e) => {
+                      const newType = e.target.value as 'property' | 'structure' | 'room' | 'area'
+                      let newId = property.id
+                      let shouldCreateNew = false
+
+                      if (newType === 'structure') {
+                        if (structures.length > 0) {
+                          newId = structures[0].id
+                        } else {
+                          // No structures exist, auto-enable create new
+                          shouldCreateNew = true
+                        }
+                      } else if (newType === 'room') {
+                        if (allRooms.length > 0) {
+                          newId = allRooms[0].id
+                        } else {
+                          shouldCreateNew = true
+                        }
+                      } else if (newType === 'area') {
+                        if (areas.length > 0) {
+                          newId = areas[0].id
+                        } else {
+                          shouldCreateNew = true
+                        }
+                      }
+
+                      setEditForm(prev => prev ? {
+                        ...prev,
+                        entityType: newType,
+                        entityId: newId,
+                        creatingNew: shouldCreateNew,
+                        newEntityName: '',
+                        newEntityType: '',
+                        newEntityStructureId: structures.length > 0 ? structures[0].id : ''
+                      } : null)
+                      setHasChanges(true)
+                    }}
+                  >
+                    <option value="property">Property</option>
+                    <option value="structure">Structure</option>
+                    <option value="room">Room</option>
+                    <option value="area">Area</option>
+                  </Select>
+
+                  {editForm.entityType === 'structure' && (
+                    <Select
+                      size="sm"
+                      value={editForm.creatingNew ? '__new__' : editForm.entityId}
+                      onChange={(e) => {
+                        if (e.target.value === '__new__') {
+                          setEditForm(prev => prev ? { ...prev, creatingNew: true, newEntityName: '', newEntityType: '' } : null)
+                        } else {
+                          setEditForm(prev => prev ? { ...prev, entityId: e.target.value, creatingNew: false } : null)
+                        }
+                        setHasChanges(true)
+                      }}
+                    >
+                      {structures.map((s: Structure) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                      <option value="__new__">+ Create new...</option>
+                    </Select>
+                  )}
+
+                  {editForm.entityType === 'room' && (
+                    <Select
+                      size="sm"
+                      value={editForm.creatingNew ? '__new__' : editForm.entityId}
+                      onChange={(e) => {
+                        if (e.target.value === '__new__') {
+                          setEditForm(prev => prev ? { ...prev, creatingNew: true, newEntityName: '', newEntityType: '' } : null)
+                        } else {
+                          setEditForm(prev => prev ? { ...prev, entityId: e.target.value, creatingNew: false } : null)
+                        }
+                        setHasChanges(true)
+                      }}
+                    >
+                      {allRooms.map((r) => (
+                        <option key={r.id} value={r.id}>{r.structureName} - {r.name}</option>
+                      ))}
+                      <option value="__new__">+ Create new...</option>
+                    </Select>
+                  )}
+
+                  {editForm.entityType === 'area' && (
+                    <Select
+                      size="sm"
+                      value={editForm.creatingNew ? '__new__' : editForm.entityId}
+                      onChange={(e) => {
+                        if (e.target.value === '__new__') {
+                          setEditForm(prev => prev ? { ...prev, creatingNew: true, newEntityName: '', newEntityType: '' } : null)
+                        } else {
+                          setEditForm(prev => prev ? { ...prev, entityId: e.target.value, creatingNew: false } : null)
+                        }
+                        setHasChanges(true)
+                      }}
+                    >
+                      {areas.map((a: Area) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                      <option value="__new__">+ Create new...</option>
+                    </Select>
+                  )}
+                </VStack>
+              </FormControl>
+
+              {/* Inline new entity form */}
+              {editForm.creatingNew && (
+                <Box p={3} bg="blue.50" borderRadius="md" borderWidth="1px" borderColor="blue.200">
+                  <Text fontSize="sm" fontWeight="500" mb={2} color="blue.700">
+                    New {editForm.entityType.charAt(0).toUpperCase() + editForm.entityType.slice(1)}
+                  </Text>
+                  <VStack spacing={2}>
+                    {editForm.entityType === 'room' && (
+                      <Select
+                        size="sm"
+                        value={editForm.newEntityStructureId}
+                        onChange={(e) => {
+                          setEditForm(prev => prev ? { ...prev, newEntityStructureId: e.target.value } : null)
+                          setHasChanges(true)
+                        }}
+                        placeholder="Select structure..."
+                      >
+                        {structures.map((s: Structure) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </Select>
+                    )}
+                    <Input
+                      size="sm"
+                      placeholder={`Name (e.g., ${editForm.entityType === 'structure' ? 'Barn' : editForm.entityType === 'room' ? 'Kitchen' : 'Garden'})`}
+                      value={editForm.newEntityName}
+                      onChange={(e) => {
+                        setEditForm(prev => prev ? { ...prev, newEntityName: e.target.value } : null)
+                        setHasChanges(true)
+                      }}
+                    />
+                    <Select
+                      size="sm"
+                      value={editForm.newEntityType}
+                      onChange={(e) => {
+                        setEditForm(prev => prev ? { ...prev, newEntityType: e.target.value } : null)
+                        setHasChanges(true)
+                      }}
+                      placeholder="Select type..."
+                    >
+                      {editForm.entityType === 'structure' && (
+                        <>
+                          <option value="house">House</option>
+                          <option value="barn">Barn</option>
+                          <option value="garage">Garage</option>
+                          <option value="shed">Shed</option>
+                          <option value="cottage">Cottage</option>
+                          <option value="other">Other</option>
+                        </>
+                      )}
+                      {editForm.entityType === 'room' && (
+                        <>
+                          <option value="bedroom">Bedroom</option>
+                          <option value="bathroom">Bathroom</option>
+                          <option value="kitchen">Kitchen</option>
+                          <option value="living_room">Living Room</option>
+                          <option value="dining_room">Dining Room</option>
+                          <option value="office">Office</option>
+                          <option value="storage">Storage</option>
+                          <option value="other">Other</option>
+                        </>
+                      )}
+                      {editForm.entityType === 'area' && (
+                        <>
+                          <option value="garden">Garden</option>
+                          <option value="field">Field</option>
+                          <option value="orchard">Orchard</option>
+                          <option value="vineyard">Vineyard</option>
+                          <option value="pool">Pool</option>
+                          <option value="patio">Patio</option>
+                          <option value="parking">Parking</option>
+                          <option value="other">Other</option>
+                        </>
+                      )}
+                    </Select>
+                  </VStack>
+                </Box>
+              )}
+
+              {/* Save button */}
+              <Button
+                colorScheme="blue"
+                onClick={handleSaveMedia}
+                isLoading={updateMediaMutation.isPending}
+                isDisabled={!hasChanges && !editForm.creatingNew}
+                size="sm"
+              >
+                {editForm.creatingNew ? 'Create & Save' : 'Save Changes'}
+              </Button>
             </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => setEditingMedia(null)}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="brand"
-              onClick={() => {
-                if (editingMedia) {
-                  updateMediaMutation.mutate({
-                    id: editingMedia.id,
-                    data: {
-                      caption: editingMedia.caption,
-                      linked_audio_id: editingMedia.linkedAudioId,
-                    },
-                  })
-                }
-              }}
-              isLoading={updateMediaMutation.isPending}
-            >
-              Save
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </VStack>
+          </Box>
+        )}
+      </Box>
+    </HStack>
   )
 }
 
@@ -1549,30 +1998,60 @@ function QuotesTab({ property }: { property: Property }) {
                 isDisabled={!newQuoteText.trim()}
               />
             </HStack>
-            <HStack>
-              <Select
-                placeholder="Link to image (optional)"
-                value={newQuoteMediaId}
-                onChange={(e) => setNewQuoteMediaId(e.target.value)}
-                size="sm"
-                flex={1}
-              >
-                {images.map((img: Media) => (
-                  <option key={img.id} value={img.id}>
-                    {img.file_name || img.url.split('/').pop()}
-                  </option>
-                ))}
-              </Select>
-              {newQuoteMediaId && (
-                <Image
-                  src={getImageById(newQuoteMediaId)?.thumbnail_url || getImageById(newQuoteMediaId)?.url}
-                  alt="Selected"
-                  boxSize="40px"
-                  objectFit="cover"
-                  borderRadius="md"
-                />
-              )}
-            </HStack>
+            {/* Image gallery picker with physics-like selection effect */}
+            <Box>
+              <Text fontSize="sm" color="gray.600" mb={2}>Link to image (optional):</Text>
+              <HStack spacing={2} flexWrap="wrap" align="flex-end">
+                {/* No image option */}
+                <Box
+                  w={!newQuoteMediaId ? '200px' : '50px'}
+                  h={!newQuoteMediaId ? '200px' : '50px'}
+                  borderRadius="lg"
+                  border="3px solid"
+                  borderColor={!newQuoteMediaId ? 'blue.500' : 'gray.200'}
+                  bg={!newQuoteMediaId ? 'blue.50' : 'gray.100'}
+                  cursor="pointer"
+                  onClick={() => setNewQuoteMediaId('')}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  transition="all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)"
+                  _hover={{ borderColor: 'blue.300', transform: !newQuoteMediaId ? 'none' : 'scale(1.1)' }}
+                  boxShadow={!newQuoteMediaId ? 'lg' : 'sm'}
+                  flexShrink={0}
+                >
+                  <Text fontSize={!newQuoteMediaId ? 'md' : 'xs'} color="gray.500" transition="all 0.3s">None</Text>
+                </Box>
+                {images.map((img: Media) => {
+                  const isSelected = newQuoteMediaId === img.id
+                  return (
+                    <Box
+                      key={img.id}
+                      w={isSelected ? '200px' : '50px'}
+                      h={isSelected ? '200px' : '50px'}
+                      borderRadius="lg"
+                      overflow="hidden"
+                      border="3px solid"
+                      borderColor={isSelected ? 'blue.500' : 'transparent'}
+                      cursor="pointer"
+                      onClick={() => setNewQuoteMediaId(img.id)}
+                      transition="all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)"
+                      _hover={{ transform: isSelected ? 'none' : 'scale(1.1)', borderColor: 'blue.300' }}
+                      boxShadow={isSelected ? 'lg' : 'sm'}
+                      flexShrink={0}
+                    >
+                      <Image
+                        src={img.thumbnail_url || img.url}
+                        alt={img.file_name}
+                        w="100%"
+                        h="100%"
+                        objectFit="cover"
+                      />
+                    </Box>
+                  )
+                })}
+              </HStack>
+            </Box>
           </VStack>
 
           {/* Existing quotes list */}
@@ -1615,30 +2094,60 @@ function QuotesTab({ property }: { property: Property }) {
                             onClick={cancelEditing}
                           />
                         </HStack>
-                        <HStack>
-                          <Select
-                            placeholder="Link to image (optional)"
-                            value={editingMediaId}
-                            onChange={(e) => setEditingMediaId(e.target.value)}
-                            size="sm"
-                            flex={1}
-                          >
-                            {images.map((img: Media) => (
-                              <option key={img.id} value={img.id}>
-                                {img.file_name || img.url.split('/').pop()}
-                              </option>
-                            ))}
-                          </Select>
-                          {editingMediaId && (
-                            <Image
-                              src={getImageById(editingMediaId)?.thumbnail_url || getImageById(editingMediaId)?.url}
-                              alt="Selected"
-                              boxSize="40px"
-                              objectFit="cover"
+                        {/* Image gallery picker for editing with physics effect */}
+                        <Box>
+                          <Text fontSize="xs" color="gray.600" mb={1}>Link to image:</Text>
+                          <HStack spacing={1} flexWrap="wrap" align="flex-end">
+                            {/* No image option */}
+                            <Box
+                              w={!editingMediaId ? '140px' : '36px'}
+                              h={!editingMediaId ? '140px' : '36px'}
                               borderRadius="md"
-                            />
-                          )}
-                        </HStack>
+                              border="2px solid"
+                              borderColor={!editingMediaId ? 'blue.500' : 'gray.200'}
+                              bg={!editingMediaId ? 'blue.50' : 'gray.100'}
+                              cursor="pointer"
+                              onClick={() => setEditingMediaId('')}
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              transition="all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)"
+                              _hover={{ borderColor: 'blue.300', transform: !editingMediaId ? 'none' : 'scale(1.1)' }}
+                              boxShadow={!editingMediaId ? 'md' : 'sm'}
+                              flexShrink={0}
+                            >
+                              <Text fontSize="xx-small" color="gray.500">None</Text>
+                            </Box>
+                            {images.map((img: Media) => {
+                              const isSelected = editingMediaId === img.id
+                              return (
+                                <Box
+                                  key={img.id}
+                                  w={isSelected ? '140px' : '36px'}
+                                  h={isSelected ? '140px' : '36px'}
+                                  borderRadius="md"
+                                  overflow="hidden"
+                                  border="2px solid"
+                                  borderColor={isSelected ? 'blue.500' : 'transparent'}
+                                  cursor="pointer"
+                                  onClick={() => setEditingMediaId(img.id)}
+                                  transition="all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)"
+                                  _hover={{ transform: isSelected ? 'none' : 'scale(1.1)', borderColor: 'blue.300' }}
+                                  boxShadow={isSelected ? 'md' : 'sm'}
+                                  flexShrink={0}
+                                >
+                                  <Image
+                                    src={img.thumbnail_url || img.url}
+                                    alt={img.file_name}
+                                    w="100%"
+                                    h="100%"
+                                    objectFit="cover"
+                                  />
+                                </Box>
+                              )
+                            })}
+                          </HStack>
+                        </Box>
                       </VStack>
                     ) : (
                       <HStack justify="space-between">

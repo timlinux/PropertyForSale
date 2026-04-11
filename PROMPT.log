@@ -123,3 +123,532 @@ Implementing hierarchical property management:
 - Backend and frontend both build successfully
 
 ---
+
+### Phase 4: Frontend Public Experience
+
+Implementing public-facing property viewing:
+- MediaGallery component with lightbox modal and keyboard navigation
+- AmbientAudioPlayer for background soundscapes (autoplay support)
+- VideoPlayer with play/pause, seek, volume, fullscreen controls
+- Enhanced PropertyPage with integrated components:
+  - Hero media gallery
+  - Interactive PropertyMap with clickable markers
+  - Dwellings and Areas tabs with detail cards
+  - Location information with coordinates
+  - Ambient audio player (fixed position)
+  - Map legend for marker types
+- Component index files for clean imports
+
+**Phase 4 Complete:**
+- Media gallery with image/video support and lightbox
+- Video player with custom controls
+- Ambient audio player for property soundscapes
+- PropertyPage fully integrated with map, media, and hierarchical content
+- Responsive layout with sticky map sidebar
+- Frontend and backend both build successfully
+
+---
+
+### Phase 5: 3D Capabilities
+
+Implementing immersive 3D viewing experiences:
+- Model3DViewer with Three.js (@react-three/fiber, @react-three/drei)
+  - GLTF/GLB model loading and display
+  - OrbitControls for rotation, zoom, pan
+  - Environment lighting and shadows
+  - Custom control buttons (zoom, reset, fullscreen)
+  - Grid overlay option
+- FloorPlanViewer for 2D floor plans
+  - Image-based floor plan display
+  - Interactive room overlays (SVG)
+  - Multi-floor support with floor selector
+  - Zoom/pan/rotate controls
+  - Room click handling for detail display
+- Video360Player for immersive video
+  - Equirectangular video on sphere geometry
+  - Mouse drag to look around
+  - Standard video controls (play, pause, seek, volume)
+  - Fullscreen support
+  - Reset view functionality
+
+**Phase 5 Complete:**
+- Three.js 3D model viewer with GLTF support
+- Interactive 2D floor plan viewer
+- 360-degree video player with sphere projection
+- All components exported via index files
+- Frontend builds successfully
+
+---
+2026-04-06 16:18:18 - Fixed nix build error: vendor/modules.txt out of sync with go.mod. Solution: Set proper vendorHash in flake.nix (sha256-iOsC6/vIVSldgRT9JkvhTpfGf1z80XCSauPRgAXL/O4=) instead of null, allowing nix to fetch Go dependencies during build rather than relying on gitignored vendor directory.
+2026-04-06 23:30:20 - Fix media listing to show media from all sub-entities (dwellings, rooms, areas)
+
+## Session: 2026-04-07 (continued)
+
+### UX Overhaul for Property Browsing
+
+User request: "ok go on with the ux overhaul for browsing a property. remember the main focus should be on the images and the ux should get out of the way"
+
+Context from previous session:
+- Implemented starred images feature with toggle functionality
+- Created timer-based slideshow for multiple starred images with ripple transition effect
+- Developed immersive full-screen PropertyExplorer with auto-hiding UI
+- Added tree-sitter style quick-jump search panel for navigating property components
+- Implemented random ripple epicenters for variety in transitions
+- Touch/swipe gesture handling for mobile
+
+### Implementation Complete
+
+1. **PropertyExplorer.tsx** - Complete rewrite for immersive UX:
+   - Full-screen image viewer with minimal auto-hiding UI (3 second timeout)
+   - Touch gestures: horizontal swipe for media nav, vertical for filmstrip
+   - Keyboard navigation: arrow keys, / for search, i for info, f for filmstrip, Esc to exit
+   - Quick-jump search panel with tree-style entity navigation
+   - Random ripple origins for all image transitions
+   - Info panel overlay with property details and "View Full Details" link
+   - Filmstrip thumbnail view with starred indicators
+
+2. **PropertiesPage.tsx** - Updated property cards:
+   - Card images now link directly to immersive explorer view
+   - Hover overlay with "Explore" button
+   - "Details" button for accessing property details page
+   - Both navigation paths remain accessible
+
+3. **SPECIFICATION.md** - Documentation updates:
+   - Added US-008/US-009 for immersive property explorer
+   - Added US-027/US-028 for media starring and slideshow
+   - Version 0.2.0 entry documenting all new features
+
+## Session: 2026-04-08
+
+### Video Thumbnails and Audio Soundscapes
+
+User requests:
+1. "when I have videos in the media gallery I should see their thumbnails"
+2. "i should be able to upload .m4a files. If I star an m4a file it should be played in a loop as the soundscape for that property / room etc"
+
+### Implementation
+
+**Video Thumbnail Generation:**
+1. Added `ffmpeg` to `flake.nix` dev environment for video processing
+2. Created new `backend/pkg/thumbnailer/thumbnailer.go`:
+   - Uses FFmpeg to extract video frames as JPEG thumbnails
+   - Extracts video metadata (duration, width, height) via ffprobe
+   - Extracts frame at 10% into video or 2 seconds, whichever is less
+   - Scales thumbnails to 640px width maintaining aspect ratio
+3. Updated `backend/internal/service/media_svc.go`:
+   - Integrated thumbnailer service
+   - Generates thumbnails automatically on video upload
+   - Extracts and stores video metadata (duration, dimensions)
+   - Thumbnail URL stored in database and served via API
+
+**Audio Soundscape Support:**
+1. Backend already supports .m4a files (audio/mp4, audio/x-m4a MIME types)
+2. Updated `frontend/src/pages/PropertyPage.tsx`:
+   - Filter audio tracks to only include **starred** audio files
+3. Updated `frontend/src/components/media/AmbientAudioPlayer.tsx`:
+   - Changed to always loop audio (ambient soundscapes should loop continuously)
+
+**Hover Preview for Media:**
+1. Created new `frontend/src/components/media/MediaPreviewCard.tsx`:
+   - Reusable component for displaying media with hover previews
+   - Videos: Show thumbnail, play video muted on hover
+   - Audio: Show audio icon, play preview on hover with pulse animation
+   - Shows duration badge for videos and audio
+   - Shows type badges (Video, 360°, Audio)
+2. Updated `frontend/src/components/property/PropertyEdit.tsx`:
+   - Use MediaPreviewCard for all media types in the grid
+   - Allow starring both images AND audio files (for soundscapes)
+   - Removed unused getMediaIcon function
+3. Updated `frontend/src/components/media/MediaGallery.tsx`:
+   - Added GalleryItem component with video hover preview
+   - Videos show thumbnail, play muted on hover
+   - Added play icon overlay for videos
+4. Updated `frontend/src/api/index.ts`:
+   - Added `width`, `height`, and `duration` fields to Media interface
+
+### Property Quotes Feature
+
+User request: "for the property the user must be able to create quotes. e.g. "Jewel of the Alentejo", "Countryside bliss" The quotes should be shown in large letters overlaid on the media, cycling through the different quotes at 15s intervals"
+
+**Backend Implementation:**
+1. Added `property_quotes` table to database migration
+2. Created `backend/internal/domain/quote/quote.go` - Quote model
+3. Created `backend/internal/repository/quote_repo.go` - Repository implementation
+4. Created `backend/internal/service/quote_svc.go` - Business logic service
+5. Created `backend/internal/handler/quote_handler.go` - HTTP handler
+6. Updated router with `/api/v1/quotes` CRUD endpoints
+7. Added `GET /api/v1/properties/:slug/quotes` public endpoint
+
+**Frontend Implementation:**
+1. Added `Quote` interface and API methods to `frontend/src/api/index.ts`
+2. Created `frontend/src/components/property/QuoteOverlay.tsx`:
+   - Displays quotes in large italic text over background images
+   - Cycles through quotes every 15 seconds with fade animation
+   - Styled with text shadow for readability
+   - Quote marks decorations
+3. Added `QuotesTab` to PropertyEdit for quote management:
+   - Add new quotes
+   - Edit existing quotes
+   - Delete quotes
+   - Visual list with numbered badges
+4. Integrated QuoteOverlay into PropertyPage background section
+
+**Audio Fix:**
+- Updated AmbientAudioPlayer to attempt autoplay for all starred audio (removed requirement for media.autoplay field)
+
+### Music Loop Not Playing Fix (2026-04-08)
+
+User report: "the music loop is not playing on the landing page for a property"
+
+**Root Cause Analysis:**
+The AmbientAudioPlayer had several issues with its useEffect hooks:
+1. The cleanup function was pausing audio whenever the `activeTrack` object reference changed (even if URL was the same)
+2. Browser autoplay restrictions caused initial play to fail silently
+3. No proper handling of the `canplaythrough` event before attempting playback
+4. The `isPlaying` state could become stale in the effect closure
+
+**Fix Applied to `frontend/src/components/media/AmbientAudioPlayer.tsx`:**
+1. Added `currentUrlRef` to track actual URL changes (not object reference changes)
+2. Separated audio source setup into its own effect
+3. Added `canplaythrough` event listener to attempt playback only when audio is ready
+4. Added play/pause event listeners to sync `isPlaying` state with actual audio element state
+5. Added `hasUserInteracted` state to track when user clicks play, allowing autoplay on subsequent track changes
+6. Moved cleanup (pause + clear src) to a separate unmount-only effect with eslint-disable comment
+7. Initial volume is now set before attempting playback
+
+### Full-Screen Mode Widget Visibility Fix (2026-04-09)
+
+User request: "the widgets on the full screen mode should have backing content so they can be seen regardless of the base image colours"
+
+**Updated `frontend/src/pages/PropertyExplorer.tsx`:**
+
+All UI widgets now have semi-transparent backgrounds with backdrop blur for visibility:
+
+1. **Starred indicator** - Added `blackAlpha.600` background with blur and rounded pill shape
+2. **Navigation arrows** - Changed from bare icons to circular buttons with `blackAlpha.500` background, smaller size (60px circles), with hover state
+3. **Keyboard hints** - Added rounded box with `blackAlpha.600` background and blur
+4. **Top bar icons** - Each icon now has individual `blackAlpha.500` circular backing with blur
+5. **Breadcrumb text** - Now wrapped in pill-shaped background for readability
+6. **Filmstrip star indicators** - Added small circular background behind star icons
+
+## Session: 2026-04-10
+
+### Bug Fixes: Video Starring and Quote Saving
+
+User reported two bugs:
+1. Cannot toggle star on videos - star icon visible but error on click
+2. Quotes cannot be saved
+
+Investigation found the SQLite migration schema (`backend/pkg/database/sqlite.go`) was missing:
+- `property_quotes` table
+- `ab_variants` table
+- `caption` and `linked_audio_id` columns in media table
+
+Fixed by adding the missing tables and columns to the SQLite migration in `sqlite.go`:
+- Added `property_quotes` table for promotional taglines
+- Added `ab_variants` table for A/B testing
+- Added `caption` and `linked_audio_id` column migrations for media
+- Added corresponding indexes
+
+
+### Quote Overlay on Fullscreen View
+
+Added quotes overlay to PropertyExplorer:
+- Fetches quotes from API using `getPropertyQuotes`
+- Displays current quote in white pill with blue italic text
+- Automatically cycles through quotes every 15 seconds with fade transition
+- Shows dot indicators for multiple quotes
+- Positioned above filmstrip/media counter at bottom of screen
+
+
+### Quote Countdown Bar
+
+Updated quote overlay:
+- Changed cycle interval from 15s to 10s
+- Added countdown progress bar at bottom of quote pill
+- Blue bar fills from 0% to 100% over the 10 second duration
+- Smooth linear transition for progress updates
+
+
+### Particle Hourglass Timer
+
+Created ParticleHourglass component (`frontend/src/components/ui/ParticleHourglass.tsx`):
+- Canvas-based particle simulation
+- Sand particles with gentle physics (gravity, friction, wobble)
+- Particles fall through neck and settle in bottom chamber
+- Hourglass shape drawn with bezier curves
+- Calming, zen-like animation
+- Resets when quote/slide changes
+
+Integrated into PropertyExplorer quote overlay:
+- Hourglass appears beside the quote text
+- Frosted glass background container
+- Blue particle color matching theme
+
+
+---
+## 2026-04-11: Associate Quotes with Specific Images
+
+### Request
+Implement the plan to associate quotes with specific images:
+- Add optional media_id field to Quote model
+- Add database migration for media_id column
+- Update handler and service to support media_id in create/update
+- Update frontend Quote type to include media_id
+- Update PropertyExplorer to display quote's linked image when available
+- Update SPECIFICATION.md
+
+### Implementation
+1. Backend - Added MediaID *string field to Quote struct in backend/internal/domain/quote/quote.go
+2. Backend - Added ALTER TABLE migration for media_id column in backend/pkg/database/sqlite.go
+3. Backend - Updated CreateQuoteRequest and UpdateQuoteRequest in backend/internal/handler/quote_handler.go
+4. Backend - Updated CreateQuoteInput and UpdateQuoteInput in backend/internal/service/quote_svc.go
+5. Frontend - Added media_id field to Quote interface in frontend/src/api/index.ts
+6. Frontend - Updated PropertyExplorer.tsx to use quote's linked image when displaying quotes
+7. Documentation - Updated SPECIFICATION.md with new user story US-034 and PropertyQuote data model
+
+---
+## 2026-04-11: Contact Page, Media Reassignment, and Media Tags
+
+### Request
+1. The contact page in top menu leads to a blank page - fix it
+2. Allow reassigning media to different structure, area, room, etc.
+3. Add special media tags for house plans and property map
+
+### Implementation
+1. **Static Pages** - Created ContactPage.tsx, AboutPage.tsx, PrivacyPage.tsx, TermsPage.tsx
+   - Added routes in App.tsx for /contact, /about, /privacy, /terms
+   - Pages include proper SEO, Kartoza attribution, and open source links
+
+2. **Media Reassignment** - Extended media edit functionality
+   - Added entity_type and entity_id fields to UpdateMediaInput in backend/internal/service/media_svc.go
+   - Updated handler to accept entity_type and entity_id in PUT /api/v1/media/:id
+   - Updated frontend edit modal with entity type and entity ID selectors
+   - Media can now be moved between property, structure, room, or area
+
+3. **Media Tags** - Added special categorization for media
+   - Added Tag field (MediaTag type) to Media struct in backend/internal/domain/media/media.go
+   - Supported tags: house_plan, property_map
+   - Created migration 000003_media_tag.up.sql and down.sql
+   - Updated frontend Media interface and edit modal with tag selector
+   - Tag badges display in media grid (purple for house plan, orange for property map)
+
+4. **Documentation** - Updated SPECIFICATION.md
+   - Added US-001a through US-001d for static pages
+   - Added US-035 for media reassignment
+   - Added US-036 for media tags
+   - Updated version to 0.4.0
+
+---
+## 2026-04-11: Create Entity from Media
+
+### Request
+Allow creating Structure/Room/Area directly from an uploaded image, with the image automatically assigned to the new entity.
+
+### Implementation
+1. Added `creatingFromMedia` state to track media and target entity type
+2. Added mutations for creating structures, rooms, and areas from media:
+   - `createStructureFromMediaMutation` - creates structure, updates media
+   - `createRoomFromMediaMutation` - creates room (with structure selection), updates media
+   - `createAreaFromMediaMutation` - creates area, updates media
+3. Added dropdown menu on each image card with options:
+   - Create Structure
+   - Create Room (disabled if no structures exist)
+   - Create Area
+4. Created `CreateFromMediaModal` component:
+   - Shows image preview
+   - Structure selector (for rooms)
+   - Dynamic form fields based on entity type
+   - Creates entity and auto-assigns media on submit
+5. Updated SPECIFICATION.md with US-037
+2026-04-11 12:10:59 - Completed inline entity creation in Edit Media Modal. Users can now create a NEW entity (structure/room/area) directly when editing media metadata by selecting '+ Create new...' in the entity dropdown. The Save button logic now first creates the new entity, then updates the media to point to it.
+2026-04-11 12:27:15 - Major UX redesign of Media tab: Removed all modals in favor of split-view pattern. Left panel shows media grid, right panel slides in when media is selected for editing. Click to select images, edit details in the side panel. Inline entity creation preserved within the side panel. Smooth transitions, selection highlighting. Zero popups for better UX.
+
+=== Session: 2026-04-11 - Fix media disappearing after Create & Save ===
+
+Problem: After clicking "Create & Save" to create a new structure and assign media to it, 
+the media disappeared from the gallery. Additionally, when viewing the structure details, 
+the media wasn't visible.
+
+Root cause: 
+1. After creating a new entity and moving media to it, the view filter remained on "property" 
+   level, so the media (now assigned to the new structure) didn't appear
+2. The Structures tab doesn't display media - it only shows rooms
+
+Fix applied to PropertyEdit.tsx (handleSaveMedia function):
+- After successfully creating a new entity and saving the media assignment, the view now 
+  automatically switches to show that entity's media
+- Added console logging for debugging
+- The detail panel closes after successful save
+
+Code changes:
+- Modified handleSaveMedia to track if a new entity was created
+- Added onSuccess callback to updateMediaMutation.mutate() that:
+  - Switches the view filter to the newly created entity type and ID
+  - Closes the detail panel after save
+
+Additional note: The Structures tab doesn't display media for structures - this is a 
+separate enhancement that could be added in a future session.
+
+
+---
+Date: 2026-04-11
+Prompt: Implement the following plan:
+
+# QGIS Three.js Scene Integration Plan
+
+## Overview
+Add support for importing QGIS Qgis2threejs exports (ZIP files) as interactive 3D property maps.
+
+## Approach: Hybrid Container (Recommended)
+Use iframe/container to load the extracted QGIS scene with React wrapper for controls.
+
+## Implementation Steps completed:
+1. Added MediaTypeScene3D to backend media domain
+2. Created ZIP extraction utility package (backend/pkg/ziputil/)
+3. Added UploadScene method to MediaService
+4. Added UploadScene handler endpoint (POST /api/v1/media/upload-scene)
+5. Added upload-scene route to router
+6. Updated frontend API with scene3d type and uploadScene method
+7. Created QGISSceneViewer component (frontend/src/components/viewer3d/)
+8. Updated MediaTab to handle ZIP uploads (detects .zip files and uses uploadScene)
+9. Added 3D Map tab to PropertyPage when scene3d media exists
+
+## Storage Structure:
+./data/media/property/{propertyId}/{sceneId}/
+├── index.html
+├── Qgis2threejs.js
+├── Qgis2threejs.css
+├── data/
+│   └── index/
+│       ├── scene.json
+│       └── *.json (geometry files)
+└── threejs/
+    ├── three.min.js
+    ├── OrbitControls.js
+    └── ViewHelper.js
+
+---
+## Session: 2026-04-11 - QGIS 3D Map Dedicated Admin Section
+
+### Request
+Refactor the QGIS 3D scene feature from a generic media upload into a dedicated "3D Map" tab in the property editor with:
+- Separate admin section (not mixed with media uploads)
+- Security sanitization for uploaded ZIP files
+- Description field for the map
+- Instructions on preparing maps with QGIS
+
+### Implementation
+
+#### Backend Security (pkg/ziputil/ziputil.go)
+Added comprehensive ZIP security validation:
+- `SceneLimits` struct: MaxZipSize (50MB), MaxExtractedSize (100MB), MaxFileCount (500), MaxFileSize (20MB), MaxPathDepth (10)
+- `AllowedExtensions` whitelist: html, js, json, css, images, fonts, 3D models (gltf, glb, obj, mtl, bin)
+- `DangerousPatterns` regex list: document.cookie, localStorage, sessionStorage, parent.document, external scripts, eval(), innerHTML assignment
+- `SafePatterns` allowlist: THREE., Q3D., Qgis2threejs (to reduce false positives)
+- `AnalyzeZIP()` - Pre-scan ZIP for size, file count, symlinks, disallowed extensions
+- `ExtractSafe()` - Extract with whitelist enforcement and size limits
+- `ValidateSceneContent()` - Post-extraction HTML/JS pattern scan
+- Refactored `Extract()` to use `ExtractSafe()` internally
+
+#### Backend Service (internal/service/media_svc.go)
+- Added `Description` field to `UploadSceneInput`
+- Modified `UploadScene()` to:
+  - Call `AnalyzeZIP()` before extraction with validation
+  - Call `ValidateSceneContent()` post-extraction (reject if >5 warnings)
+  - Store file_count and original_filename in metadata
+  - Store description in Caption field
+
+#### Backend Handler (internal/handler/media_handler.go)
+- Added description field parsing from POST form data
+
+#### Frontend API (frontend/src/api/index.ts)
+- Updated `uploadScene()` to accept optional description parameter
+
+#### Frontend Component (frontend/src/components/property/Map3DTab.tsx)
+New dedicated component with:
+- Introduction card explaining 3D property maps
+- Collapsible accordion with step-by-step QGIS instructions
+- Upload section with drag-and-drop, description textarea, security notice
+- When scene exists: embedded QGISSceneViewer preview, scene info, editable description
+- Actions: Save Description, Replace Map, Delete Map
+
+#### Frontend PropertyEdit.tsx
+- Added "3D Map" tab to tab list
+- Imported and rendered Map3DTab component
+- Removed ZIP handling from MediaTab (now shows info toast directing to 3D Map tab)
+- Removed .zip from file input accept attribute
+- Removed scene3d badge from media grid (now in dedicated tab)
+
+#### Tests (pkg/ziputil/ziputil_test.go)
+New test suite:
+- TestAnalyzeZIP_ValidScene
+- TestAnalyzeZIP_DisallowedExtensions
+- TestAnalyzeZIP_TooManyFiles
+- TestExtractSafe_ValidScene
+- TestExtractSafe_SkipsDisallowed
+- TestValidateSceneContent_SafeContent
+- TestValidateSceneContent_DangerousPatterns
+- TestValidateQGISScene_ValidScene/MissingIndex/MissingDataDir
+- TestFindRootDirectory_RootLevel/Subdirectory
+- TestAllowedExtensions
+
+### Documentation
+- Updated SPECIFICATION.md:
+  - Enhanced US-038 with security validation details
+  - Added US-038a (QGIS instructions)
+  - Added US-038b (3D map management)
+  - Added ZIP security details to Section 7.2
+  - Version 0.6.0 changelog
+
+2026-04-11 19:48:13 - Implemented quote-media linking: quotes with media_id now only display when that specific media is on screen in PropertyExplorer. Updated applicableQuotes useMemo filter, cycling useEffect dependencies, and reset effect to watch applicableQuotes.
+
+---
+## 2026-04-11: Two-Panel Drag-and-Drop Media Management
+
+### Request
+Implement a two-panel drag-and-drop media management UI that appears when editing structures, rooms, and areas. Users can drag media between panels to associate/disassociate media with entities.
+
+### Implementation
+
+**New Components Created:**
+1. `frontend/src/components/media/MediaAssociationPanel/index.tsx` - Main two-panel component
+   - Left panel: Property-level media (not assigned to any structure/room/area)
+   - Right panel: Media belonging to the current entity being edited
+   - Drag left-to-right: Associates media with the entity
+   - Drag right-to-left: Returns media to property level (disassociates)
+   - Mobile fallback with buttons for touch devices
+
+2. `frontend/src/components/media/MediaAssociationPanel/DraggableMediaCard.tsx` - Draggable thumbnail wrapper
+   - Uses native HTML5 drag-and-drop
+   - Visual feedback during drag (opacity, scale transitions)
+   - Supports all media types (image, video, audio, 3D models, documents)
+
+3. `frontend/src/components/media/MediaAssociationPanel/DropZone.tsx` - Drop target with visual feedback
+   - Dashed border becomes solid on dragover
+   - Color changes to indicate valid drop zone
+   - Shows item count and helpful empty state messages
+
+**Integration Points:**
+1. **StructureItem** - Added collapsible "Structure Media" section below rooms list
+   - Toggle button to show/hide MediaAssociationPanel
+   - Passed property prop for slug/id access
+
+2. **Room Items** - Added expandable media row for each room
+   - Click image icon to expand MediaAssociationPanel inline
+   - Toggle between room rows (only one expanded at a time)
+
+3. **Area Cards** - Added expandable media panel to each area card
+   - Click image icon to toggle MediaAssociationPanel
+   - Inline within the card body
+
+**Files Modified:**
+- `frontend/src/components/media/index.ts` - Added MediaAssociationPanel export
+- `frontend/src/components/property/PropertyEdit.tsx` - Integrated panels into StructureItem, rooms, and AreasTab
+
+**Visual Design:**
+- Two equal-width panels with direction arrows between them
+- Gray color scheme for property media panel
+- Blue color scheme for entity media panel
+- Drop zone glow effect when dragging over
+- Toast notifications on successful association/disassociation

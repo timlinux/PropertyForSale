@@ -74,6 +74,10 @@ and sales conversion.
 | ID | Story | Acceptance Criteria |
 |----|-------|---------------------|
 | US-001 | As a visitor, I want to view the landing page with featured properties | Landing page loads with hero section, featured properties, and call-to-action |
+| US-001a | As a visitor, I want to view the About page | About page explains the platform, technology, and open source nature |
+| US-001b | As a visitor, I want to view the Contact page | Contact page shows contact methods and open source contribution links |
+| US-001c | As a visitor, I want to view Privacy Policy | Privacy page explains data handling practices |
+| US-001d | As a visitor, I want to view Terms of Service | Terms page explains usage conditions and EUPL-1.2 licensing |
 | US-002 | As a visitor, I want to explore properties on an interactive map | Map displays property markers, clicking shows preview, can filter by location |
 | US-003 | As a visitor, I want to view detailed property information | Property page shows all media, descriptions, floor plans, and contact options |
 | US-004 | As a visitor, I want to navigate property features via the map | Clicking map features navigates to corresponding content sections |
@@ -112,6 +116,14 @@ and sales conversion.
 | US-032 | As an agent, I want to create promotional quotes for my property | Add/edit/delete taglines like "Jewel of the Alentejo" via Quotes tab in property editor |
 | US-033 | As a visitor, I want to see promotional quotes overlaid on property images | Large italic text quotes cycle every 15 seconds with fade transitions over the background images |
 | US-034 | As an agent, I want to associate quotes with specific images | Each quote can optionally link to a media item; when that quote displays, its linked image becomes the background |
+| US-035 | As an agent, I want to reassign media to different entities | Edit modal allows changing entity_type and entity_id to move media between property/structure/room/area |
+| US-036 | As an agent, I want to tag media as house plans or property maps | Special tags (house_plan, property_map) for categorizing architectural drawings and site maps |
+| US-037 | As an agent, I want to create entities from uploaded images | Menu on each image allows creating Structure/Room/Area with the image auto-assigned to the new entity |
+| US-038 | As an agent, I want to upload QGIS Qgis2threejs 3D scene exports | Dedicated "3D Map" tab in property editor; upload ZIP file containing QGIS 3D scene; system validates for security (file types, sizes, dangerous patterns); add optional description; preview embedded viewer |
+| US-038a | As an agent, I want instructions on creating 3D maps | Collapsible accordion with step-by-step QGIS/Qgis2threejs instructions in the 3D Map tab |
+| US-038b | As an agent, I want to manage my 3D map | Edit description, replace existing map, or delete map from the dedicated 3D Map tab |
+| US-039 | As a visitor, I want to view interactive 3D terrain maps of properties | Property page shows "3D Map" tab with embedded QGIS scene viewer, fullscreen support, scene controls |
+| US-040 | As an agent, I want to drag-and-drop media to associate/disassociate with entities | Two-panel UI in structure/room/area edit: left panel shows unassigned property media, right panel shows entity media; drag between panels to associate/disassociate; visual feedback during drag |
 
 ### 3.4 Content Management
 
@@ -301,6 +313,7 @@ All endpoints prefixed with `/api/v1/`
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/v1/media/upload` | Upload media file |
+| POST | `/api/v1/media/upload-scene` | Upload QGIS 3D scene (ZIP) |
 | GET | `/api/v1/media/{id}` | Get media metadata |
 | PUT | `/api/v1/media/{id}` | Update media metadata |
 | DELETE | `/api/v1/media/{id}` | Delete media |
@@ -333,6 +346,7 @@ All endpoints prefixed with `/api/v1/`
 - BR-012: 3D models must be converted to glTF format
 - BR-013: Maximum file size: images 10MB, videos 500MB, models 100MB
 - BR-014: Autoplay audio requires user interaction first
+- BR-015: QGIS 3D scenes must be uploaded as ZIP files containing valid Qgis2threejs exports (index.html, data/ or threejs/ directory)
 
 ### 6.3 Analytics Rules
 
@@ -359,6 +373,16 @@ All endpoints prefixed with `/api/v1/`
 - Rate limiting: 100 requests/minute for unauthenticated
 - CSRF protection on all mutations
 - Content Security Policy headers
+- ZIP file upload security:
+  - Maximum upload size: 50MB
+  - Maximum extracted size: 100MB
+  - Maximum file count: 500 files
+  - Maximum individual file size: 20MB
+  - Maximum path depth: 10 directories
+  - File extension whitelist (HTML, JS, CSS, images, fonts, 3D models only)
+  - Symlink rejection
+  - Dangerous JavaScript pattern scanning (cookie access, localStorage, parent frame access, external scripts)
+  - Safe pattern allowlist for legitimate Qgis2threejs code (THREE., Q3D., Qgis2threejs)
 
 ### 7.3 Availability
 
@@ -402,3 +426,7 @@ All endpoints prefixed with `/api/v1/`
 | 0.1.0 | 2026-04-04 | System | Initial specification |
 | 0.2.0 | 2026-04-07 | System | Added immersive PropertyExplorer with auto-hiding UI, touch gestures, ripple transitions, quick-jump search, filmstrip view; Added media starring feature with slideshow functionality; Made explorer the primary entry point from property cards |
 | 0.3.0 | 2026-04-11 | System | Added quote-media association allowing quotes to link to specific images; when a quote with an associated image displays, that image becomes the background |
+| 0.4.0 | 2026-04-11 | System | Added Contact, About, Privacy, and Terms pages; Added media reassignment to move media between entities; Added special media tags (house_plan, property_map) for architectural drawings; Added "Create from Media" feature to create Structure/Room/Area directly from uploaded images |
+| 0.5.0 | 2026-04-11 | System | Added QGIS Qgis2threejs 3D scene integration; Upload ZIP exports as scene3d media type; QGISSceneViewer component with fullscreen support; 3D Map tab on property page |
+| 0.6.0 | 2026-04-11 | System | Refactored 3D Map to dedicated admin tab (separate from Media); Added comprehensive ZIP security sanitization (size limits, extension whitelist, dangerous pattern scanning); Added description field for maps; Added step-by-step QGIS instructions in collapsible accordion; Removed ZIP upload from general Media tab |
+| 0.7.0 | 2026-04-11 | System | Added two-panel drag-and-drop media management for structures, rooms, and areas; MediaAssociationPanel component with left panel (property media) and right panel (entity media); drag between panels to associate/disassociate media; expandable media sections in StructureItem, room rows, and area cards |

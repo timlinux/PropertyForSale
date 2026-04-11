@@ -403,7 +403,7 @@ func runMigrations(db *gorm.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_properties_owner ON properties(owner_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_properties_status ON properties(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_structures_property ON structures(property_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_rooms_structure ON rooms(structure_id)`,
+		// Note: idx_rooms_structure is created later after structure_id column migration
 		`CREATE INDEX IF NOT EXISTS idx_areas_property ON areas(property_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_media_entity ON media(entity_type, entity_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_content_versions_entity ON content_versions(entity_type, entity_id)`,
@@ -442,6 +442,8 @@ func runMigrations(db *gorm.DB) error {
 		`ALTER TABLE property_quotes ADD COLUMN media_id TEXT`,
 		// Rename dwelling to structure - add structure_id column to rooms
 		`ALTER TABLE rooms ADD COLUMN structure_id TEXT`,
+		// Media tags for special categorization (house_plan, property_map)
+		`ALTER TABLE media ADD COLUMN tag TEXT DEFAULT ''`,
 	}
 
 	for _, update := range schemaUpdates {
@@ -469,6 +471,43 @@ func runMigrations(db *gorm.DB) error {
 
 	// Copy dwelling_id to structure_id in rooms table (if dwelling_id exists)
 	db.Exec(`UPDATE rooms SET structure_id = dwelling_id WHERE structure_id IS NULL AND dwelling_id IS NOT NULL`)
+
+	// Migrate rooms table to use structure_id instead of dwelling_id
+	// SQLite doesn't support dropping columns or changing NOT NULL, so we recreate the table
+	var hasDwellingID int
+	db.Raw(`SELECT COUNT(*) FROM pragma_table_info('rooms') WHERE name = 'dwelling_id'`).Scan(&hasDwellingID)
+	if hasDwellingID > 0 {
+		log.Info().Msg("Migrating rooms table: replacing dwelling_id with structure_id")
+		// Create new table with correct schema
+		db.Exec(`CREATE TABLE IF NOT EXISTS rooms_new (
+			id TEXT PRIMARY KEY,
+			structure_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			type TEXT,
+			description TEXT,
+			size_sqm REAL,
+			floor INTEGER DEFAULT 0,
+			floor_start INTEGER DEFAULT 0,
+			floor_end INTEGER DEFAULT 0,
+			sort_order INTEGER DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (structure_id) REFERENCES structures(id) ON DELETE CASCADE
+		)`)
+		// Copy data (use structure_id if exists, otherwise dwelling_id)
+		db.Exec(`INSERT OR IGNORE INTO rooms_new (id, structure_id, name, type, description, size_sqm, floor, floor_start, floor_end, sort_order, created_at, updated_at)
+			SELECT id, COALESCE(structure_id, dwelling_id), name, type, description, size_sqm,
+				COALESCE(floor, 0), COALESCE(floor_start, 0), COALESCE(floor_end, 0),
+				COALESCE(sort_order, 0), created_at, updated_at
+			FROM rooms WHERE COALESCE(structure_id, dwelling_id) IS NOT NULL`)
+		// Drop old table and rename new one
+		db.Exec(`DROP TABLE IF EXISTS rooms`)
+		db.Exec(`ALTER TABLE rooms_new RENAME TO rooms`)
+		log.Info().Msg("Rooms table migration complete")
+	}
+
+	// Create index on rooms.structure_id (after column has been added)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_rooms_structure ON rooms(structure_id)`)
 
 	// Update media entity_type from 'dwelling' to 'structure'
 	db.Exec(`UPDATE media SET entity_type = 'structure' WHERE entity_type = 'dwelling'`)
