@@ -107,6 +107,21 @@
           subPackages = [ "cmd/server" ];
         };
 
+        # Frontend build
+        frontendBuild = pkgs.buildNpmPackage {
+          pname = "propertyforsale-frontend";
+          version = "0.1.0";
+          src = ./frontend;
+          npmDepsHash = "sha256-dkofWvjT11dbHPOVjBW/Y5pd0KqhmMdRU9QlyYXqPiY=";
+          buildPhase = ''
+            npm run build
+          '';
+          installPhase = ''
+            mkdir -p $out
+            cp -r dist/* $out/
+          '';
+        };
+
         # =======================================================================
         # Script wrappers - thin wrappers that set env vars and call scripts
         # =======================================================================
@@ -261,6 +276,7 @@
         packages = {
           default = goBuild;
           backend = goBuild;
+          frontend = frontendBuild;
           postgres = postgresWithPostGIS;
         };
 
@@ -412,18 +428,25 @@
         };
       }
     ) // {
-      # NixOS module for deployment
+      # NixOS module that can be imported by other flakes
+      nixosModules.default = { config, lib, pkgs, ... }: {
+        imports = [
+          ./deploy/module.nix
+        ];
+
+        # Set package defaults from this flake's outputs
+        config.services.propertyforsale = lib.mkIf config.services.propertyforsale.enable {
+          package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.backend;
+          frontend = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.frontend;
+        };
+      };
+
+      # Example standalone NixOS configuration for deployment
       nixosConfigurations.propertyforsale-server = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
+          self.nixosModules.default
           ./deploy/configuration.nix
-        ];
-      };
-
-      # NixOS module that can be imported
-      nixosModules.default = { config, lib, pkgs, ... }: {
-        imports = [
-          ./deploy/services.nix
         ];
       };
     };

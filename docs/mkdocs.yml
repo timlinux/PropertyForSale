@@ -95,6 +95,7 @@ nav:
       - Interactive Maps: user-guide/maps.md
   - Admin Guide:
       - Setup: admin-guide/setup.md
+      - NixOS Deployment: admin-guide/nixos-deployment.md
       - Property Management: admin-guide/properties.md
       - Media Management: admin-guide/media.md
       - Analytics: admin-guide/analytics.md
