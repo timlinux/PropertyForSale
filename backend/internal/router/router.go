@@ -154,6 +154,7 @@ func New(cfg *config.Config) (*gin.Engine, func(), error) {
 		media.Use(middleware.RequireAuth(cfg))
 		{
 			media.POST("/upload", handlers.Media.Upload)
+			media.POST("/upload-scene", handlers.Media.UploadScene)
 			media.GET("/:id", handlers.Media.Get)
 			media.PUT("/:id", handlers.Media.Update)
 			media.DELETE("/:id", handlers.Media.Delete)

@@ -82,7 +82,7 @@ export interface Media {
   id: string
   entity_type: 'property' | 'structure' | 'room' | 'area'
   entity_id: string
-  type: 'image' | 'video' | 'video360' | 'audio' | 'document' | 'model3d'
+  type: 'image' | 'video' | 'video360' | 'audio' | 'document' | 'model3d' | 'scene3d'
   url: string
   thumbnail_url: string
   file_name: string
@@ -95,6 +95,7 @@ export interface Media {
   linked_audio_id?: string  // Link audio to image for narration
   autoplay: boolean
   starred: boolean
+  tag?: string  // Special tags: house_plan, property_map
   sort_order: number
   created_at: string
   updated_at: string
@@ -450,7 +451,24 @@ export const api = {
       return res.json() as Promise<Media>
     }),
 
-  updateMedia: (id: string, data: { autoplay?: boolean; starred?: boolean; sort_order?: number; caption?: string; linked_audio_id?: string | null }) =>
+  uploadScene: (formData: FormData, description?: string) => {
+    if (description) {
+      formData.append('description', description)
+    }
+    return fetch(`${API_BASE}/media/upload-scene`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Scene upload failed' }))
+        throw new Error(error.error || 'Scene upload failed')
+      }
+      return res.json() as Promise<Media>
+    })
+  },
+
+  updateMedia: (id: string, data: { autoplay?: boolean; starred?: boolean; sort_order?: number; caption?: string; linked_audio_id?: string | null; entity_type?: string; entity_id?: string; tag?: string }) =>
     fetchAPI<Media>(`/media/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

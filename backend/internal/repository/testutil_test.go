@@ -105,6 +105,7 @@ type testMedia struct {
 	LinkedAudioID *uuid.UUID `gorm:"type:text"`
 	Autoplay      bool       `gorm:"default:false"`
 	Starred       bool       `gorm:"default:false"`
+	Tag           string     `gorm:"default:''"`
 	Metadata      string     `gorm:"type:text;default:'{}'"`
 	SortOrder     int        `gorm:"default:0"`
 	CreatedAt     time.Time

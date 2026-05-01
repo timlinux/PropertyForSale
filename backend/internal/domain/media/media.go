@@ -20,6 +20,7 @@ const (
 	MediaTypeAudio    MediaType = "audio"
 	MediaTypeDocument MediaType = "document"
 	MediaTypeModel3D  MediaType = "model3d"
+	MediaTypeScene3D  MediaType = "scene3d"
 )
 
 // EntityType represents the type of entity the media is attached to
@@ -30,6 +31,15 @@ const (
 	EntityTypeStructure EntityType = "structure"
 	EntityTypeRoom      EntityType = "room"
 	EntityTypeArea      EntityType = "area"
+)
+
+// MediaTag represents special tags for categorizing media
+type MediaTag string
+
+const (
+	MediaTagNone        MediaTag = ""
+	MediaTagHousePlan   MediaTag = "house_plan"
+	MediaTagPropertyMap MediaTag = "property_map"
 )
 
 // Media represents a media file attached to an entity
@@ -50,6 +60,7 @@ type Media struct {
 	LinkedAudioID *uuid.UUID `json:"linked_audio_id,omitempty" gorm:"type:uuid"` // Link audio to image
 	Autoplay      bool       `json:"autoplay" gorm:"default:false"`
 	Starred       bool       `json:"starred" gorm:"default:false"`
+	Tag           MediaTag   `json:"tag" gorm:"default:''"` // Special tags like house_plan, property_map
 	Metadata     types.JSONB `json:"metadata" gorm:"type:text;default:'{}'"`
 	SortOrder    int         `json:"sort_order" gorm:"default:0"`
 	CreatedAt    time.Time   `json:"created_at"`

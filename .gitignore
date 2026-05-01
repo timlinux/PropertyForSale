@@ -79,6 +79,11 @@ backend/.go/
 uploads/
 /media/
 backend/media/
+backend/data/
+data/
+
+# Test binaries
+backend/server_test
 
 # GeoIP database
 *.mmdb

@@ -43,9 +43,11 @@ import {
   FiSquare,
   FiX,
   FiStar,
+  FiGlobe,
 } from 'react-icons/fi'
 import { api, type Structure, type Area, type Media } from '../api'
 import PropertyMap from '../components/map/PropertyMap'
+import { QGISSceneViewer } from '../components/viewer3d'
 import { AmbientAudioPlayer } from '../components/media'
 import { usePageTracking } from '../hooks/usePageTracking'
 import { SEOHead } from '../components/common/SEOHead'
@@ -108,6 +110,12 @@ export default function PropertyPage() {
   // Filter media by type
   const propertyImages = useMemo(
     () => allMedia.filter((m) => m.entity_type === 'property' && m.type === 'image'),
+    [allMedia]
+  )
+
+  // Get 3D scene media
+  const scene3dMedia = useMemo(
+    () => allMedia.filter((m) => m.type === 'scene3d'),
     [allMedia]
   )
   // Only include starred audio as ambient soundscapes
@@ -561,6 +569,14 @@ export default function PropertyPage() {
                           <Text>Location</Text>
                         </HStack>
                       </Tab>
+                      {scene3dMedia.length > 0 && (
+                        <Tab>
+                          <HStack>
+                            <Icon as={FiGlobe} />
+                            <Text>3D Map</Text>
+                          </HStack>
+                        </Tab>
+                      )}
                     </TabList>
 
                     <TabPanels>
@@ -625,6 +641,17 @@ export default function PropertyPage() {
                           </Text>
                         </VStack>
                       </TabPanel>
+
+                      {/* 3D Map Tab */}
+                      {scene3dMedia.length > 0 && (
+                        <TabPanel p={0}>
+                          <QGISSceneViewer
+                            sceneUrl={scene3dMedia[0].url}
+                            height="500px"
+                            title={`${property.name} - 3D Map`}
+                          />
+                        </TabPanel>
+                      )}
                     </TabPanels>
                   </Tabs>
                 </Card>
