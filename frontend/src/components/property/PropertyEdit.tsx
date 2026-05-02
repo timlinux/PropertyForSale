@@ -954,7 +954,7 @@ function MediaTab({ property }: { property: Property }) {
     if (!selectedMediaId || !editForm) return
 
     let entityId = editForm.entityId
-    let newEntityType = editForm.entityType
+    const newEntityType = editForm.entityType
     let createdNewEntity = false
 
     // If creating a new entity, create it first

@@ -184,6 +184,7 @@ interface SceneSetupProps {
 }
 
 function SceneSetup({ modelUrl, showGrid, autoRotate, onLoaded }: SceneSetupProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const controlsRef = useRef<any>(null)
   const { camera } = useThree()
 

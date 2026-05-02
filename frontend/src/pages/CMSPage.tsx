@@ -22,6 +22,8 @@ import { PagesList, PageBuilder } from '../components/cms'
 export function CMSPage() {
   const [editingPage, setEditingPage] = useState<Page | null>(null)
   const bgColor = useColorModeValue('white', 'gray.800')
+  const borderColor = useColorModeValue('gray.200', 'gray.700')
+  const pageBgColor = useColorModeValue('gray.50', 'gray.900')
 
   if (editingPage) {
     return (
@@ -30,7 +32,7 @@ export function CMSPage() {
           px={4}
           py={2}
           borderBottom="1px solid"
-          borderColor={useColorModeValue('gray.200', 'gray.700')}
+          borderColor={borderColor}
         >
           <HStack>
             <Button
@@ -57,7 +59,7 @@ export function CMSPage() {
   }
 
   return (
-    <Box minH="calc(100vh - 60px)" bg={useColorModeValue('gray.50', 'gray.900')} py={8}>
+    <Box minH="calc(100vh - 60px)" bg={pageBgColor} py={8}>
       <Container maxW="container.xl">
         <Box mb={6}>
           <Breadcrumb separator={<FiChevronRight />} fontSize="sm" color="gray.500">

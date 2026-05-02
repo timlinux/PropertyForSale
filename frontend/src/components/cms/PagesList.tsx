@@ -63,6 +63,7 @@ export function PagesList({ onEditPage }: PagesListProps) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const borderColor = useColorModeValue('gray.200', 'gray.600')
+  const hoverBg = useColorModeValue('gray.50', 'gray.700')
 
   // Create page form state
   const [newPage, setNewPage] = useState({
@@ -215,7 +216,7 @@ export function PagesList({ onEditPage }: PagesListProps) {
             </Thead>
             <Tbody>
               {data.pages.map((page) => (
-                <Tr key={page.id} _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}>
+                <Tr key={page.id} _hover={{ bg: hoverBg }}>
                   <Td fontWeight="medium">{page.title}</Td>
                   <Td>
                     <Text fontFamily="mono" fontSize="sm">/{page.slug}</Text>
