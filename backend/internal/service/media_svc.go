@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"github.com/timlinux/PropertyForSale/backend/internal/repository"
 	"github.com/timlinux/PropertyForSale/backend/pkg/thumbnailer"
 	"github.com/timlinux/PropertyForSale/backend/pkg/types"
+	"github.com/timlinux/PropertyForSale/backend/pkg/ziputil"
 )
 
 // MediaService handles media business logic
@@ -165,6 +167,9 @@ type UpdateMediaInput struct {
 	SortOrder     *int
 	Caption       *string
 	LinkedAudioID *uuid.UUID
+	EntityType    *media.EntityType
+	EntityID      *uuid.UUID
+	Tag           *media.MediaTag
 	Metadata      map[string]interface{}
 }
 
@@ -189,6 +194,15 @@ func (s *MediaService) Update(ctx context.Context, id uuid.UUID, input UpdateMed
 	}
 	if input.LinkedAudioID != nil {
 		m.LinkedAudioID = input.LinkedAudioID
+	}
+	if input.EntityType != nil {
+		m.EntityType = *input.EntityType
+	}
+	if input.EntityID != nil {
+		m.EntityID = *input.EntityID
+	}
+	if input.Tag != nil {
+		m.Tag = *input.Tag
 	}
 	if input.Metadata != nil {
 		m.Metadata = types.JSONB(input.Metadata)
@@ -218,6 +232,165 @@ func (s *MediaService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return s.mediaRepo.Delete(ctx, id)
+}
+
+// UploadSceneInput contains the data for uploading a 3D scene
+type UploadSceneInput struct {
+	EntityType  media.EntityType
+	EntityID    uuid.UUID
+	File        io.Reader
+	FileName    string
+	FileSize    int64
+	Description string // User-provided description for the scene
+}
+
+// UploadScene uploads and extracts a QGIS Qgis2threejs export ZIP file
+func (s *MediaService) UploadScene(ctx context.Context, input UploadSceneInput) (*media.Media, error) {
+	// Generate unique scene ID
+	sceneID := uuid.New().String()
+
+	// Create a temporary file to store the ZIP
+	tempDir := os.TempDir()
+	tempFile, err := os.CreateTemp(tempDir, "scene-*.zip")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tempPath := tempFile.Name()
+	defer os.Remove(tempPath)
+
+	// Write uploaded file to temp
+	if _, err := io.Copy(tempFile, input.File); err != nil {
+		tempFile.Close()
+		return nil, fmt.Errorf("failed to write temp file: %w", err)
+	}
+	tempFile.Close()
+
+	// Security: Analyze ZIP file before extraction
+	analysis, err := ziputil.AnalyzeZIP(tempPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to analyze ZIP file: %w", err)
+	}
+
+	if !analysis.IsValid {
+		return nil, fmt.Errorf("ZIP validation failed: %s", strings.Join(analysis.Errors, "; "))
+	}
+
+	// Create target directory for extraction
+	targetDir := filepath.Join(
+		s.storagePath,
+		string(input.EntityType),
+		input.EntityID.String(),
+		sceneID,
+	)
+
+	// Extract ZIP to target directory (uses secure extraction)
+	if err := ziputil.Extract(tempPath, targetDir); err != nil {
+		return nil, fmt.Errorf("failed to extract zip: %w", err)
+	}
+
+	// Find the root directory of the scene (may be in a subdirectory)
+	rootDir, err := ziputil.FindRootDirectory(targetDir)
+	if err != nil {
+		// Clean up on failure
+		os.RemoveAll(targetDir)
+		return nil, fmt.Errorf("invalid QGIS scene: %w", err)
+	}
+
+	// If scene files are in a subdirectory, move them to the target root
+	if rootDir != targetDir {
+		// Move contents from subdirectory to target
+		entries, err := os.ReadDir(rootDir)
+		if err != nil {
+			os.RemoveAll(targetDir)
+			return nil, fmt.Errorf("failed to read scene directory: %w", err)
+		}
+		for _, entry := range entries {
+			src := filepath.Join(rootDir, entry.Name())
+			dst := filepath.Join(targetDir, entry.Name())
+			if err := os.Rename(src, dst); err != nil {
+				os.RemoveAll(targetDir)
+				return nil, fmt.Errorf("failed to move scene files: %w", err)
+			}
+		}
+		// Remove the now-empty subdirectory
+		os.RemoveAll(rootDir)
+	}
+
+	// Validate the scene structure
+	if err := ziputil.ValidateQGISScene(targetDir); err != nil {
+		// Clean up on failure
+		os.RemoveAll(targetDir)
+		return nil, fmt.Errorf("invalid QGIS scene: %w", err)
+	}
+
+	// Security: Scan content for dangerous patterns (informational only)
+	// The iframe sandbox provides actual security - this is just for logging
+	warnings, err := ziputil.ValidateSceneContent(targetDir)
+	if err != nil {
+		// Log but don't fail - the iframe sandbox provides security
+		fmt.Printf("Warning: content validation error: %v\n", err)
+	}
+	if len(warnings) > 0 {
+		previewCount := len(warnings)
+		if previewCount > 3 {
+			previewCount = 3
+		}
+		fmt.Printf("Scene content warnings (%d): %v\n", len(warnings), warnings[:previewCount])
+	}
+
+	// Try to extract metadata from scene.json
+	metadata := make(map[string]interface{})
+	sceneJSONPath := filepath.Join(targetDir, "data", "index", "scene.json")
+	if data, err := os.ReadFile(sceneJSONPath); err == nil {
+		var sceneData map[string]interface{}
+		if err := json.Unmarshal(data, &sceneData); err == nil {
+			// Extract useful metadata
+			if title, ok := sceneData["title"].(string); ok {
+				metadata["title"] = title
+			}
+			if layers, ok := sceneData["layers"].([]interface{}); ok {
+				metadata["layer_count"] = len(layers)
+			}
+		}
+	}
+
+	// Store analysis info in metadata
+	metadata["file_count"] = analysis.FileCount
+	metadata["original_filename"] = input.FileName
+	if len(warnings) > 0 {
+		metadata["security_warnings"] = len(warnings)
+	}
+
+	// Create media record
+	now := time.Now()
+	relativePath := filepath.Join(
+		string(input.EntityType),
+		input.EntityID.String(),
+		sceneID,
+	)
+
+	m := &media.Media{
+		ID:         uuid.New(),
+		EntityType: input.EntityType,
+		EntityID:   input.EntityID,
+		Type:       media.MediaTypeScene3D,
+		URL:        fmt.Sprintf("/api/v1/media/files/%s", relativePath),
+		FileName:   input.FileName,
+		FileSize:   input.FileSize,
+		MimeType:   "application/x-qgis-scene",
+		Caption:    input.Description, // Store user description in Caption field
+		Metadata:   types.JSONB(metadata),
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	if err := s.mediaRepo.Create(ctx, m); err != nil {
+		// Clean up on failure
+		os.RemoveAll(targetDir)
+		return nil, fmt.Errorf("failed to create media record: %w", err)
+	}
+
+	return m, nil
 }
 
 func determineMediaType(mimeType string) media.MediaType {

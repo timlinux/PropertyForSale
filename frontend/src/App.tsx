@@ -13,6 +13,10 @@ import DevLoginPage from './pages/DevLoginPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import { CMSPage } from './pages/CMSPage'
+import ContactPage from './pages/ContactPage'
+import AboutPage from './pages/AboutPage'
+import PrivacyPage from './pages/PrivacyPage'
+import TermsPage from './pages/TermsPage'
 import { useAuthStore } from './context/authStore'
 
 // Protected route wrapper
@@ -53,6 +57,10 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="properties" element={<PropertiesPage />} />
           <Route path="property/:slug" element={<PropertyPage />} />
+          <Route path="contact" element={<ContactPage />} />
+          <Route path="about" element={<AboutPage />} />
+          <Route path="privacy" element={<PrivacyPage />} />
+          <Route path="terms" element={<TermsPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="dev-login" element={<DevLoginPage />} />
           <Route path="auth/callback" element={<AuthCallbackPage />} />

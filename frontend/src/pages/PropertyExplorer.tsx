@@ -142,14 +142,6 @@ export default function PropertyExplorer() {
   const QUOTE_DURATION = 10000 // 10 seconds
   const PROGRESS_INTERVAL = 50 // Update progress every 50ms
 
-  const currentQuote = quotes[currentQuoteIndex]
-
-  // Find the image associated with the current quote (if any)
-  const quoteLinkedImage = useMemo(() => {
-    if (!currentQuote?.media_id) return null
-    return allMedia.find(m => m.id === currentQuote.media_id) || null
-  }, [currentQuote, allMedia])
-
   // Get starred audio tracks for ambient soundscape
   const audioTracks = useMemo(() =>
     allMedia.filter((m) => m.type === 'audio' && m.starred),
@@ -191,10 +183,25 @@ export default function PropertyExplorer() {
       })
   }, [context, allMedia, property])
 
-  // Current image - prefer quote's linked image, fallback to currentMedia
-  const currentImage = quoteLinkedImage || currentMedia[mediaIndex] || null
+  // Current image from the current entity's media
+  const currentImage = currentMedia[mediaIndex] || null
   const hasNextMedia = mediaIndex < currentMedia.length - 1
   const hasPrevMedia = mediaIndex > 0
+
+  // Filter quotes to only show applicable ones:
+  // - Quotes with no media_id can show with any image
+  // - Quotes with media_id only show when that image is displayed
+  const applicableQuotes = useMemo(() => {
+    if (!currentImage) {
+      // No image displayed - only show quotes without linked media
+      return quotes.filter(q => !q.media_id)
+    }
+    return quotes.filter(q => !q.media_id || q.media_id === currentImage.id)
+  }, [quotes, currentImage])
+
+  const currentQuote = applicableQuotes.length > 0
+    ? applicableQuotes[currentQuoteIndex % applicableQuotes.length]
+    : null
 
   // Build entity tree for quick jump
   const entityTree = useMemo((): EntityNode[] => {
@@ -292,24 +299,13 @@ export default function PropertyExplorer() {
       setQuoteProgress((elapsed / QUOTE_DURATION) * 100)
     }, PROGRESS_INTERVAL)
 
-    // Slide transition - stagger quote and image changes for smooth zen experience
+    // Slide transition - cycle media and applicable quotes
     quoteIntervalRef.current = setTimeout(() => {
-      // Calculate next quote and its associated image
-      const nextQuoteIndex = quotes.length > 0 ? (currentQuoteIndex + 1) % quotes.length : 0
-      const nextQuote = quotes[nextQuoteIndex]
-      const nextQuoteLinkedImage = nextQuote?.media_id
-        ? allMedia.find(m => m.id === nextQuote.media_id)
-        : null
-
-      // Determine next image URL - prefer quote's linked image, fallback to cycling currentMedia
+      // Cycle through images
       let nextImageUrlToUse: string | null = null
       let shouldUpdateMediaIndex = false
 
-      if (nextQuoteLinkedImage) {
-        // Use the next quote's linked image
-        nextImageUrlToUse = nextQuoteLinkedImage.url
-      } else if (currentMedia.length > 1) {
-        // Cycle through current entity's media
+      if (currentMedia.length > 1) {
         const nextMediaIndex = mediaIndex + 1 < currentMedia.length ? mediaIndex + 1 : 0
         nextImageUrlToUse = currentMedia[nextMediaIndex]?.url || null
         shouldUpdateMediaIndex = true
@@ -323,15 +319,16 @@ export default function PropertyExplorer() {
 
       // Fade out quote gently (starts at 3s, 2s transition completes at 5s)
       setTimeout(() => {
-        if (quotes.length > 0) {
+        if (applicableQuotes.length > 0) {
           setQuoteVisible(false)
         }
       }, 3000)
 
-      // Change quote and fade back in after full fade out (5.5s)
+      // Cycle to next applicable quote and fade back in
       setTimeout(() => {
-        if (quotes.length > 0) {
-          setCurrentQuoteIndex(nextQuoteIndex)
+        if (applicableQuotes.length > 0) {
+          // Move to next quote in the applicable quotes list
+          setCurrentQuoteIndex(prev => (prev + 1) % Math.max(1, applicableQuotes.length))
           setQuoteVisible(true)
         }
       }, 5500)
@@ -350,14 +347,14 @@ export default function PropertyExplorer() {
       if (quoteIntervalRef.current) clearTimeout(quoteIntervalRef.current)
       if (quoteProgressRef.current) clearInterval(quoteProgressRef.current)
     }
-  }, [currentQuoteIndex, quotes, mediaIndex, currentMedia, allMedia, getRandomRippleOrigin, QUOTE_DURATION, PROGRESS_INTERVAL])
+  }, [currentQuoteIndex, applicableQuotes, mediaIndex, currentMedia, getRandomRippleOrigin, QUOTE_DURATION, PROGRESS_INTERVAL])
 
-  // Reset quote index when quotes/media change
+  // Reset quote index when applicable quotes change (e.g., navigating to new image)
   useEffect(() => {
     setCurrentQuoteIndex(0)
     setQuoteVisible(true)
     setQuoteProgress(0)
-  }, [quotes])
+  }, [applicableQuotes])
 
   // Extract dominant color from current image
   useEffect(() => {

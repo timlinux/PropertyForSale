@@ -115,6 +115,21 @@ func (h *MediaHandler) Update(c *gin.Context) {
 		emptyID := uuid.Nil
 		input.LinkedAudioID = &emptyID
 	}
+	// Handle entity reassignment
+	if v, ok := req["entity_type"].(string); ok {
+		entityType := media.EntityType(v)
+		input.EntityType = &entityType
+	}
+	if v, ok := req["entity_id"].(string); ok {
+		if entityID, err := uuid.Parse(v); err == nil {
+			input.EntityID = &entityID
+		}
+	}
+	// Handle media tag
+	if v, ok := req["tag"].(string); ok {
+		tag := media.MediaTag(v)
+		input.Tag = &tag
+	}
 
 	m, err := h.mediaSvc.Update(c.Request.Context(), id, input)
 	if err != nil {
@@ -139,6 +154,58 @@ func (h *MediaHandler) Delete(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNoContent, nil)
+}
+
+// UploadScene handles POST /api/v1/media/upload-scene
+func (h *MediaHandler) UploadScene(c *gin.Context) {
+	entityType := c.PostForm("entity_type")
+	entityIDStr := c.PostForm("entity_id")
+	description := c.PostForm("description")
+
+	entityID, err := uuid.Parse(entityIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entity_id"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file required"})
+		return
+	}
+	defer file.Close()
+
+	// Validate file extension
+	if !isZipFile(header.Filename) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file must be a ZIP archive"})
+		return
+	}
+
+	input := service.UploadSceneInput{
+		EntityType:  media.EntityType(entityType),
+		EntityID:    entityID,
+		File:        file,
+		FileName:    header.Filename,
+		FileSize:    header.Size,
+		Description: description,
+	}
+
+	m, err := h.mediaSvc.UploadScene(c.Request.Context(), input)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, m)
+}
+
+// isZipFile checks if a filename has a ZIP extension
+func isZipFile(filename string) bool {
+	ext := ""
+	if i := len(filename) - 4; i > 0 && filename[i] == '.' {
+		ext = filename[i:]
+	}
+	return ext == ".zip" || ext == ".ZIP"
 }
 
 // ToggleStar handles POST /api/v1/media/:id/star
